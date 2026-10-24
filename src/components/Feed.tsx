@@ -28,7 +28,12 @@ export function Pending({ rows, agents, ttl, owner }: { rows: PendingRow[]; agen
     return me === owner?.toLowerCase() || me === a?.policy.auditor.toLowerCase();
   };
   return (
-    <Section id="approvals" title="Pending approvals" sub="Spends above the co-sign threshold wait here for a second key. The agent can never approve its own request.">
+    <Section
+      id="approvals"
+      title="Pending approvals"
+      sub="Spends above the co-sign threshold wait here for a second key. The agent can never approve its own request."
+      aside={<img src="/media/fala/web/fala-two-key-approval.jpg" alt="Two independent authorization halves meeting at a vault" loading="lazy" className="hidden h-44 w-72 rounded-card object-cover md:block" />}
+    >
       {!rows.length ? (
         <Empty>Nothing waiting. Large spends from agents will show up here.</Empty>
       ) : (
@@ -124,11 +129,13 @@ export function Scoreboard({ events, protectedAmt }: { events: FeedEvent[]; prot
   return (
     <Section id="redteam" title="Red-team scoreboard" sub="What the vault refused, grouped by the rule that stopped it.">
       <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
-        <div className="card flex flex-col justify-between gap-10">
-          <div className="cap">[ attacks stopped ]</div>
-          <div>
-            <div className="text-[clamp(4rem,9vw,7rem)] leading-none tracking-tightest text-bad">{blocked.length}</div>
-            <div className="mt-4 text-[20px]">{fmtUsdc(protectedAmt)} USDC protected · <span className="text-ok">0 USDC lost</span></div>
+        <div className="card relative flex flex-col justify-between gap-10 overflow-hidden text-white">
+          <img src="/media/fala/web/fala-red-team-proof.jpg" alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="cap relative !text-white/80">[ attacks stopped ]</div>
+          <div className="relative">
+            <div className="text-[clamp(4rem,9vw,7rem)] leading-none tracking-tightest text-white">{blocked.length}</div>
+            <div className="mt-4 text-[20px]">{fmtUsdc(protectedAmt)} USDC protected · <span className="text-[#6fe3a1]">0 USDC lost</span></div>
           </div>
         </div>
         <div className="card">
