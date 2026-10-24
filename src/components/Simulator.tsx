@@ -49,7 +49,8 @@ export function Simulator({ agents }: { agents: AgentRow[] }) {
           </div>
           <button className="btn" onClick={run} disabled={!agents.length}>Run check</button>
         </div>
-        <div className="card flex flex-col justify-between">
+        <div className="card flex flex-col justify-between gap-6">
+          <img src="/media/fala/web/fala-policy-boundary.jpg" alt="A transparent policy boundary around the vault" loading="lazy" className="aspect-[16/9] w-full rounded-2xl object-cover" />
           <div className="cap">[ verdict ]</div>
           <div className={`text-[30px] leading-tight tracking-tightest ${out?.tone ?? "text-mute"}`}>{out?.text ?? "Run a check to see what the vault would do."}</div>
         </div>
