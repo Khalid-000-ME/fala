@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { startAuditor } from "./auditor.js";
-import { addresses, anthropicKey, explorerTx } from "./lib/config.js";
+import { addresses, groqKey, explorerTx } from "./lib/config.js";
 import { addressOf, freeze, pendingStatus, spend, type SpendResult } from "./lib/vault.js";
 import { runWorker } from "./worker.js";
 
@@ -55,7 +55,7 @@ async function main() {
       continue;
     }
 
-    if (s.kind === "llm" && anthropicKey()) {
+    if (s.kind === "llm" && groqKey()) {
       via = "llm";
       const run = await runWorker(s.task!, fill(s.vendorContent, addr));
       results = run.spends;

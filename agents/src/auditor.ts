@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { parseEventLogs, type Address } from "viem";
 import { falaVaultAbi } from "./lib/abi.js";
-import { anthropicKey, deployBlock, explorerTx, labelFor, model, vaultAddress } from "./lib/config.js";
+import { deployBlock, explorerTx, groqKey, labelFor, vaultAddress } from "./lib/config.js";
+import { chat } from "./lib/llm.js";
 import { approve, pendingStatus, publicClient, reject } from "./lib/vault.js";
 
 const WINDOW = 9_999n;
@@ -24,15 +24,11 @@ async function recentHistory(agent: Address, tip: bigint) {
 
 async function decide(ctx: object): Promise<Decision> {
   const note = String((ctx as any).note ?? "");
-  const key = anthropicKey();
-  if (key) {
+  if (groqKey()) {
     try {
-      const res = await new Anthropic({ apiKey: key }).messages.create({
-        model: model(), max_tokens: 300, system: PROMPT, messages: [{ role: "user", content: JSON.stringify(ctx) }],
-      });
-      const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-      const m = text.match(/\{[\s\S]*\}/);
-      if (m) return JSON.parse(m[0]) as Decision;
+      const res = await chat([{ role: "system", content: PROMPT }, { role: "user", content: JSON.stringify(ctx) }], { json: true, maxTokens: 300 });
+      const d = JSON.parse(res.content ?? "{}") as Decision;
+      if (d.decision === "approve" || d.decision === "reject") return d;
     } catch (e: any) {
       console.error(`  auditor LLM failed (${e?.message}); falling back to rules`);
     }

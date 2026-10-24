@@ -68,7 +68,7 @@ npm run auditor               # standalone auditor loop
 claude mcp add fala -- npx tsx $PWD/src/mcp-server.ts
 ```
 
-The worker and auditor use `ANTHROPIC_API_KEY`; without it the auditor falls back to a keyword rule and LLM scenarios
+The worker and auditor use `GROQ_API_KEY` (Groq, OpenAI-compatible); without it the auditor falls back to a keyword rule and LLM scenarios
 run as direct calls. Run the suite once per UTC day — daily counters reset at 00:00 UTC.
 
 ## Security
