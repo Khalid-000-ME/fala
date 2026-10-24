@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { startAuditor } from "./auditor.js";
 import { addresses, groqKey, explorerTx } from "./lib/config.js";
@@ -90,13 +90,19 @@ async function main() {
   }
 
   await stopAuditor();
+  // Merge with a previous (partial) run so the report always lists every scenario.
+  const out = new URL("../../docs/demo-report", import.meta.url).pathname;
+  if (only.length && existsSync(`${out}.json`)) {
+    const prev: Row[] = JSON.parse(readFileSync(`${out}.json`, "utf8"));
+    const ids = new Set(rows.map((r) => r.id));
+    rows.splice(0, rows.length, ...scenarios.flatMap((s) => rows.filter((r) => r.id === s.id).concat(ids.has(s.id) ? [] : prev.filter((r) => r.id === s.id))));
+  }
   const md = [
     "# Fala demo report", "", `Generated ${new Date().toISOString()}`, "",
     "| Scenario | Attack | Via | Outcome | Reason | Tx |", "|---|---|---|---|---|---|",
     ...rows.map((r) => `| ${r.pass ? "✅" : "❌"} ${r.id} | ${r.title}${r.note ? ` _(${r.note})_` : ""} | ${r.via} | ${r.outcome} | ${r.reason} | ${r.tx.startsWith("http") ? `[tx](${r.tx})` : r.tx} |`),
     "", `**${rows.filter((r) => r.outcome.startsWith("blocked") || r.outcome.includes("REJECTED")).length} attacks stopped.**`, "",
   ].join("\n");
-  const out = new URL("../../docs/demo-report", import.meta.url).pathname;
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(`${out}.md`, md);
   writeFileSync(`${out}.json`, JSON.stringify(rows, null, 2));
