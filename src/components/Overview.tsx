@@ -23,8 +23,10 @@ export function Hero({ state, protectedAmt }: { state?: VaultState; protectedAmt
           </div>
         </div>
 
-        <div className="halftone tile rise relative aspect-[5/4] w-full overflow-hidden p-7 text-white sm:p-9" style={{ background: "linear-gradient(170deg,#3f78d6 0%,#7fb0ec 55%,#cfe3f6 100%)", animationDelay: ".08s" }}>
-          <div className="flex items-center justify-between font-mono text-[13px] uppercase">
+        <div className="tile rise relative aspect-[5/4] w-full overflow-hidden text-white" style={{ animationDelay: ".08s" }}>
+          <img src="/media/fala/web/fala-hero-policy-tether.jpg" alt="An agent tethered to a black vault, hostile signals breaking against a boundary" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: "58% 50%" }} fetchPriority="high" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(6,10,40,.82) 0%, rgba(6,10,40,.35) 42%, rgba(6,10,40,0) 70%)" }} />
+          <div className="relative flex items-center justify-between p-7 font-mono text-[13px] uppercase sm:p-9">
             <span>Fala vault</span>
             <span className="inline-flex items-center gap-2"><i className="pulse-dot h-2 w-2 rounded-full bg-white" />{state?.paused ? "paused" : "live"}</span>
           </div>
