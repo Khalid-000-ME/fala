@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePublicClient } from "wagmi";
-import type { PublicClient } from "viem";
+import { parseEventLogs, type PublicClient } from "viem";
 import { falaVaultAbi } from "../lib/abi";
 import { DEMO, VAULT, VAULT_DEPLOY_BLOCK } from "../config/chain";
 import type { AgentRow, FeedEvent, PendingRow } from "../lib/types";
@@ -9,7 +9,6 @@ import { demoAgents, demoEvents } from "../lib/demo";
 
 const WINDOW = 9_999n; // eth_getLogs on Arc is capped at ~10k blocks
 const POLL = 3_000;
-const vaultEvents = falaVaultAbi.filter((x) => x.type === "event");
 
 export type VaultState = {
   balance: bigint;
@@ -129,7 +128,9 @@ export function useVaultEvents() {
         const fresh: FeedEvent[] = [];
         while (from <= tip && !stop) {
           const to = from + WINDOW - 1n < tip ? from + WINDOW - 1n : tip;
-          const logs = (await client.getLogs({ address: VAULT!, events: vaultEvents as any, fromBlock: from, toBlock: to })) as unknown as RawLog[];
+          // Arc's RPC rejects multi-event topic filters, so filter by address only and decode locally.
+          const raw = await client.getLogs({ address: VAULT!, fromBlock: from, toBlock: to });
+          const logs = parseEventLogs({ abi: falaVaultAbi, logs: raw }) as unknown as RawLog[];
           const blocks = [...new Set(logs.map((l) => l.blockNumber))];
           await Promise.all(blocks.map(stamp));
           for (const l of logs) {
@@ -149,7 +150,8 @@ export function useVaultEvents() {
           });
         }
         setLoading(false);
-      } catch {
+      } catch (e) {
+        console.error("fala: failed to load vault events", e);
         setLoading(false);
       }
     };
