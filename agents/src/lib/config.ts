@@ -38,7 +38,7 @@ export const privateKey = (r: Role): Hex => {
   return (v.startsWith("0x") ? v : `0x${v}`) as Hex;
 };
 
-export const model = () => opt("MODEL") ?? "llama-3.3-70b-versatile";
+export const model = () => opt("MODEL") ?? "openai/gpt-oss-120b";
 export const groqKey = () => opt("GROQ_API_KEY");
 
 export const addresses = () => ({
