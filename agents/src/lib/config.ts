@@ -33,10 +33,13 @@ export const gas = {
 
 export type Role = "worker" | "auditor" | "rogue" | "owner";
 const keyEnv: Record<Role, string> = { worker: "AGENT_PRIVATE_KEY", auditor: "AUDITOR_PRIVATE_KEY", rogue: "ROGUE_PRIVATE_KEY", owner: "OWNER_PRIVATE_KEY" };
-export const privateKey = (r: Role) => need(keyEnv[r]) as Hex;
+export const privateKey = (r: Role): Hex => {
+  const v = need(keyEnv[r]).trim();
+  return (v.startsWith("0x") ? v : `0x${v}`) as Hex;
+};
 
-export const model = () => opt("MODEL") ?? "claude-sonnet-5-5";
-export const anthropicKey = () => opt("ANTHROPIC_API_KEY");
+export const model = () => opt("MODEL") ?? "llama-3.3-70b-versatile";
+export const groqKey = () => opt("GROQ_API_KEY");
 
 export const addresses = () => ({
   VENDOR_A: need("VENDOR_A") as Address,
