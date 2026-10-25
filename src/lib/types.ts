@@ -1,45 +1,65 @@
-export type Policy = {
-  perTxCap: bigint;
-  dailyCap: bigint;
-  coSignThreshold: bigint;
-  expiry: number;
-  maxTxPerDay: number;
-  active: boolean;
-  auditor: `0x${string}`;
-};
+export type IntentStatus = "PENDING" | "APPROVED" | "DENIED" | "EXPIRED" | "CANCELLED" | "FAILED";
 
-export type AgentRow = {
-  address: `0x${string}`;
-  policy: Policy;
-  spentToday: bigint;
-  txToday: number;
-  blocked: number;
-};
-
-export type EventKind = "executed" | "blocked" | "queued" | "approved" | "rejected";
+export type FeedKind =
+  | "autopaid"
+  | "pending"
+  | "approved"
+  | "denied"
+  | "expired"
+  | "cancelled"
+  | "failed"
+  | "rejected"
+  | "frozen"
+  | "unfrozen"
+  | "deposit"
+  | "withdraw";
 
 export type FeedEvent = {
   id: string;
-  kind: EventKind;
+  kind: FeedKind;
   agent?: `0x${string}`;
   payee?: `0x${string}`;
   amount?: bigint;
+  intentId?: bigint;
+  memo?: string;
   reason?: number;
-  note?: string;
-  pendingId?: bigint;
-  by?: `0x${string}`;
   tx: string;
   block: bigint;
   logIndex: number;
   ts: number;
 };
 
-export type PendingRow = {
+export type IntentRow = {
   id: bigint;
   agent: `0x${string}`;
   payee: `0x${string}`;
   amount: bigint;
-  note: string;
+  memo: string;
+  code: string;
   createdAt: number;
+  expiresAt: number;
+  status: IntentStatus;
   tx: string;
+  settledTx?: string;
+  dkimT?: number;
+  relayer?: `0x${string}`;
 };
+
+export type AgentRow = {
+  address: `0x${string}`;
+  active: boolean;
+  autoPerTx: bigint;
+  autoDaily: bigint;
+  hardCap: bigint;
+  autoSpentToday: bigint;
+};
+
+export type KeyRow = {
+  id: `0x${string}`;
+  domain: string;
+  selector: string;
+  activeAt: number;
+  revoked: boolean;
+};
+
+export const REJECTION = ["", "Not a registered agent", "Vault is frozen", "Bad input", "Over the hard cap", "Payout failed"] as const;
