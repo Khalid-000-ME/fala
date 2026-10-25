@@ -1,0 +1,30 @@
+name = "fala-approver"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# outbound mail goes only to your verified approver address (Email Routing -> Destination addresses)
+send_email = [{ name = "SEND_EMAIL" }]
+
+[triggers]
+crons = ["* * * * *"]
+
+# wrangler kv namespace create STATE   -> paste the id
+# [[kv_namespaces]]
+# binding = "STATE"
+# id = "<kv-namespace-id>"
+
+[vars]
+NETWORK = "testnet"
+RPC_URL = "https://rpc.testnet.arc.io"
+VAULT_ADDRESS = "0x1F338BA8AB3e858e0c46a83a9959C06c437C5282"
+VAULT_DEPLOY_BLOCK = "69051544"
+APPROVER_EMAIL = "REPLACE_ME@gmail.com"
+INBOUND_ADDRESS = "approve@REPLACE_ME.example"
+SEND_FROM = "fala@REPLACE_ME.example"
+MAX_FEE_GWEI = "25"
+PRIORITY_FEE_GWEI = "1"
+
+# secrets (never in this file):
+#   wrangler secret put RELAYER_PRIVATE_KEY
+#   wrangler secret put NOTIFY_TOKEN
