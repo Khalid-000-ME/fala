@@ -4,69 +4,66 @@ import { usePublicClient } from "wagmi";
 import { parseEventLogs, type PublicClient } from "viem";
 import { falaVaultAbi } from "../lib/abi";
 import { DEMO, VAULT, VAULT_DEPLOY_BLOCK } from "../config/chain";
-import type { AgentRow, FeedEvent, PendingRow } from "../lib/types";
-import { demoAgents, demoEvents } from "../lib/demo";
+import type { AgentRow, FeedEvent, IntentRow, KeyRow } from "../lib/types";
+import { demoAgents, demoEvents, demoIntents, demoKeys } from "../lib/demo";
 
 const WINDOW = 9_999n; // eth_getLogs on Arc is capped at ~10k blocks
 const POLL = 3_000;
 
 export type VaultState = {
   balance: bigint;
-  paused: boolean;
-  pendingTtl: number;
-  totalBlocked: bigint;
-  totalExecuted: bigint;
+  frozen: boolean;
   owner?: `0x${string}`;
+  intentTtl: number;
+  relayerTip: bigint;
+  keyTimelock: number;
   agents: AgentRow[];
+  keyFlags: { id: `0x${string}`; activeAt: number; revoked: boolean }[];
 };
 
 const demoState: VaultState = {
-  balance: 14_500_000n,
-  paused: false,
-  pendingTtl: 3600,
-  totalBlocked: 5n,
-  totalExecuted: 2n,
+  balance: 6_400_000n,
+  frozen: false,
+  intentTtl: 3600,
+  relayerTip: 20_000n,
+  keyTimelock: 86400,
   agents: demoAgents,
+  keyFlags: demoKeys.map((k) => ({ id: k.id, activeAt: k.activeAt, revoked: k.revoked })),
 };
 
 async function loadState(c: PublicClient): Promise<VaultState> {
   const base = { address: VAULT!, abi: falaVaultAbi } as const;
-  const [balance, paused, ttl, tb, te, owner, list] = await Promise.all([
+  const [balance, frozen, owner, ttl, tip, timelock, list, keyIds] = await Promise.all([
     c.readContract({ ...base, functionName: "vaultBalance" }),
-    c.readContract({ ...base, functionName: "paused" }),
-    c.readContract({ ...base, functionName: "pendingTtl" }),
-    c.readContract({ ...base, functionName: "totalBlocked" }),
-    c.readContract({ ...base, functionName: "totalExecuted" }),
+    c.readContract({ ...base, functionName: "frozen" }),
     c.readContract({ ...base, functionName: "owner" }),
+    c.readContract({ ...base, functionName: "intentTtl" }),
+    c.readContract({ ...base, functionName: "relayerTip" }),
+    c.readContract({ ...base, functionName: "keyTimelock" }),
     c.readContract({ ...base, functionName: "getAgents" }),
+    c.readContract({ ...base, functionName: "getKeyIds" }),
   ]);
   const today = Math.floor(Date.now() / 1000 / 86400);
   const agents = await Promise.all(
     list.map(async (address): Promise<AgentRow> => {
-      const [p, d, blocked] = await Promise.all([
-        c.readContract({ ...base, functionName: "getPolicy", args: [address] }),
-        c.readContract({ ...base, functionName: "dayState", args: [address] }),
-        c.readContract({ ...base, functionName: "blockedCount", args: [address] }),
-      ]);
-      const fresh = d[0] === today;
+      const cfg = await c.readContract({ ...base, functionName: "agents", args: [address] });
       return {
         address,
-        policy: {
-          perTxCap: p.perTxCap,
-          dailyCap: p.dailyCap,
-          coSignThreshold: p.coSignThreshold,
-          expiry: Number(p.expiry),
-          maxTxPerDay: p.maxTxPerDay,
-          active: p.active,
-          auditor: p.auditor,
-        },
-        spentToday: fresh ? d[1] : 0n,
-        txToday: fresh ? d[2] : 0,
-        blocked: Number(blocked),
+        active: cfg[0],
+        autoPerTx: cfg[1],
+        autoDaily: cfg[2],
+        hardCap: cfg[3],
+        autoSpentToday: cfg[4] === today ? cfg[5] : 0n,
       };
     }),
   );
-  return { balance, paused, pendingTtl: Number(ttl), totalBlocked: tb, totalExecuted: te, owner, agents };
+  const keyFlags = await Promise.all(
+    keyIds.map(async (id) => {
+      const k = await c.readContract({ ...base, functionName: "keys", args: [id] });
+      return { id, activeAt: Number(k[2]), revoked: k[3] };
+    }),
+  );
+  return { balance, frozen, owner, intentTtl: Number(ttl), relayerTip: tip, keyTimelock: Number(timelock), agents, keyFlags };
 }
 
 export function useVaultState() {
@@ -77,7 +74,7 @@ export function useVaultState() {
     refetchInterval: POLL,
     enabled: !DEMO && !!client,
   });
-  return { state: DEMO ? demoState : q.data, loading: !DEMO && q.isLoading, error: q.error as Error | null, refetch: q.refetch };
+  return { state: DEMO ? demoState : q.data, loading: !DEMO && q.isLoading, error: q.error as Error | null };
 }
 
 type RawLog = { eventName: string; args: Record<string, any>; blockNumber: bigint; logIndex: number; transactionHash: string };
@@ -86,25 +83,46 @@ function toFeed(l: RawLog, ts: number): FeedEvent | null {
   const base = { id: `${l.transactionHash}-${l.logIndex}`, tx: l.transactionHash, block: l.blockNumber, logIndex: l.logIndex, ts };
   const x = l.args;
   switch (l.eventName) {
-    case "SpendExecuted":
-      return { ...base, kind: "executed", agent: x.agent, payee: x.payee, amount: x.amount, note: x.note, pendingId: x.pendingId };
-    case "SpendBlocked":
-      return { ...base, kind: "blocked", agent: x.agent, payee: x.payee, amount: x.amount, reason: Number(x.reason), note: x.note };
-    case "SpendQueued":
-      return { ...base, kind: "queued", agent: x.agent, payee: x.payee, amount: x.amount, note: x.note, pendingId: x.pendingId };
-    case "SpendApproved":
-      return { ...base, kind: "approved", pendingId: x.pendingId, by: x.approver };
-    case "SpendRejected":
-      return { ...base, kind: "rejected", pendingId: x.pendingId, by: x.by, reason: Number(x.reason) };
+    case "AutoPaid":
+      return { ...base, kind: "autopaid", agent: x.agent, payee: x.payee, amount: x.amount6, memo: x.memo };
+    case "IntentCreated":
+      return { ...base, kind: "pending", agent: x.agent, payee: x.payee, amount: x.amount6, memo: x.memo, intentId: x.id };
+    case "IntentRejected":
+      return { ...base, kind: "rejected", agent: x.agent, payee: x.payee, amount: x.amount6, reason: Number(x.reason) };
+    case "Paid":
+      return { ...base, kind: "approved", payee: x.payee, amount: x.amount6, intentId: x.id };
+    case "EmailDenied":
+      return { ...base, kind: "denied", intentId: x.id };
+    case "PayoutFailed":
+      return { ...base, kind: "failed", payee: x.payee, amount: x.amount6, intentId: x.id };
+    case "IntentClosed":
+      return { ...base, kind: Number(x.status) === 5 ? "cancelled" : "expired", intentId: x.id };
+    case "EmailFrozen":
+      return { ...base, kind: "frozen" };
+    case "Unfrozen":
+      return { ...base, kind: "unfrozen" };
+    case "Deposited":
+      return { ...base, kind: "deposit", amount: x.amount6 };
+    case "Withdrawn":
+      return { ...base, kind: "withdraw", amount: x.amount6 };
     default:
       return null;
   }
 }
 
-/** Reads ONLY vault events (never USDC Transfer logs), paged in 9,999-block windows, then polls the tip. */
-export function useVaultEvents() {
+export type ChainLogs = {
+  events: FeedEvent[];
+  intents: IntentRow[];
+  keys: KeyRow[];
+  payees: Record<string, boolean>;
+  approvals: Record<string, { dkimT: number; relayer: `0x${string}`; tx: string }>;
+  loading: boolean;
+};
+
+/** Reads ONLY vault events (never USDC Transfer logs), by address in 9,999-block windows, decoded locally, then polls. */
+export function useVaultLogs(): ChainLogs {
   const client = usePublicClient();
-  const [events, setEvents] = useState<FeedEvent[]>(DEMO ? demoEvents : []);
+  const [logs, setLogs] = useState<{ raw: RawLog[]; ts: Map<bigint, number> }>({ raw: [], ts: new Map() });
   const [loading, setLoading] = useState(!DEMO);
   const cursor = useRef<bigint | null>(null);
   const tsCache = useRef(new Map<bigint, number>());
@@ -112,50 +130,34 @@ export function useVaultEvents() {
   useEffect(() => {
     if (DEMO || !client) return;
     let stop = false;
-
     const stamp = async (n: bigint) => {
-      const hit = tsCache.current.get(n);
-      if (hit) return hit;
+      if (tsCache.current.has(n)) return;
       const b = await client.getBlock({ blockNumber: n });
       tsCache.current.set(n, Number(b.timestamp));
-      return Number(b.timestamp);
     };
-
     const sync = async () => {
       try {
         const tip = await client.getBlockNumber();
         let from = cursor.current === null ? VAULT_DEPLOY_BLOCK : cursor.current + 1n;
-        const fresh: FeedEvent[] = [];
+        const fresh: RawLog[] = [];
         while (from <= tip && !stop) {
           const to = from + WINDOW - 1n < tip ? from + WINDOW - 1n : tip;
           // Arc's RPC rejects multi-event topic filters, so filter by address only and decode locally.
           const raw = await client.getLogs({ address: VAULT!, fromBlock: from, toBlock: to });
-          const logs = parseEventLogs({ abi: falaVaultAbi, logs: raw }) as unknown as RawLog[];
-          const blocks = [...new Set(logs.map((l) => l.blockNumber))];
-          await Promise.all(blocks.map(stamp));
-          for (const l of logs) {
-            const f = toFeed(l, tsCache.current.get(l.blockNumber)!);
-            if (f) fresh.push(f);
-          }
+          const decoded = parseEventLogs({ abi: falaVaultAbi, logs: raw }) as unknown as RawLog[];
+          await Promise.all([...new Set(decoded.map((l) => l.blockNumber))].map(stamp));
+          fresh.push(...decoded);
           from = to + 1n;
         }
         if (stop) return;
         cursor.current = tip;
-        if (fresh.length) {
-          setEvents((prev) => {
-            const seen = new Set(prev.map((e) => e.id));
-            return [...prev, ...fresh.filter((e) => !seen.has(e.id))].sort((a, b) =>
-              a.block === b.block ? a.logIndex - b.logIndex : a.block < b.block ? -1 : 1,
-            );
-          });
-        }
+        if (fresh.length) setLogs((p) => ({ raw: [...p.raw, ...fresh], ts: tsCache.current }));
         setLoading(false);
       } catch (e) {
         console.error("fala: failed to load vault events", e);
         setLoading(false);
       }
     };
-
     sync();
     const t = setInterval(sync, POLL);
     return () => {
@@ -164,20 +166,73 @@ export function useVaultEvents() {
     };
   }, [client]);
 
-  return { events, loading };
+  return DEMO ? { events: demoEvents, intents: demoIntents, keys: demoKeys, payees: { [demoEvents[1].payee!]: true, [demoEvents[4].payee!]: false }, approvals: {}, loading: false } : derive(logs.raw, logs.ts, loading);
 }
 
-/** Queued spends that have no approval/rejection event yet. */
-export function derivePending(events: FeedEvent[]): PendingRow[] {
-  const resolved = new Set(events.filter((e) => e.kind === "approved" || e.kind === "rejected").map((e) => e.pendingId));
-  return events
-    .filter((e) => e.kind === "queued" && !resolved.has(e.pendingId))
-    .map((e) => ({ id: e.pendingId!, agent: e.agent!, payee: e.payee!, amount: e.amount!, note: e.note ?? "", createdAt: e.ts, tx: e.tx }))
-    .reverse();
-}
+function derive(raw: RawLog[], ts: Map<bigint, number>, loading: boolean): ChainLogs {
+  const sorted = [...raw].sort((a, b) => (a.blockNumber === b.blockNumber ? a.logIndex - b.logIndex : a.blockNumber < b.blockNumber ? -1 : 1));
+  const events: FeedEvent[] = [];
+  const intents = new Map<string, IntentRow>();
+  const keys = new Map<string, KeyRow>();
+  const payees: Record<string, boolean> = {};
+  const approvals: ChainLogs["approvals"] = {};
 
-export function protectedAmount(events: FeedEvent[]) {
-  return events.filter((e) => e.kind === "blocked").reduce((s, e) => s + (e.amount ?? 0n), 0n);
+  for (const l of sorted) {
+    const when = ts.get(l.blockNumber) ?? 0;
+    const f = toFeed(l, when);
+    if (f) events.push(f);
+    const x = l.args;
+    switch (l.eventName) {
+      case "IntentCreated":
+        intents.set(String(x.id), {
+          id: x.id, agent: x.agent, payee: x.payee, amount: x.amount6, memo: x.memo, code: String(x.code).slice(2),
+          createdAt: when, expiresAt: Number(x.expiresAt), status: "PENDING", tx: l.transactionHash,
+        });
+        break;
+      case "EmailApproved":
+        approvals[String(x.id)] = { dkimT: Number(x.dkimT), relayer: x.relayer, tx: l.transactionHash };
+        break;
+      case "Paid": {
+        const i = intents.get(String(x.id));
+        if (i) Object.assign(i, { status: "APPROVED", settledTx: l.transactionHash, dkimT: approvals[String(x.id)]?.dkimT, relayer: approvals[String(x.id)]?.relayer });
+        break;
+      }
+      case "PayoutFailed": {
+        const i = intents.get(String(x.id));
+        if (i) Object.assign(i, { status: "FAILED", settledTx: l.transactionHash });
+        break;
+      }
+      case "EmailDenied": {
+        const i = intents.get(String(x.id));
+        if (i) Object.assign(i, { status: "DENIED", settledTx: l.transactionHash, dkimT: Number(x.dkimT) });
+        break;
+      }
+      case "IntentClosed": {
+        const i = intents.get(String(x.id));
+        if (i) Object.assign(i, { status: Number(x.status) === 5 ? "CANCELLED" : "EXPIRED", settledTx: l.transactionHash });
+        break;
+      }
+      case "KeyProposed":
+        keys.set(x.keyId, { id: x.keyId, domain: x.domain, selector: x.selector, activeAt: Number(x.activeAt), revoked: false });
+        break;
+      case "KeyRevokedByOwner": {
+        const k = keys.get(x.keyId);
+        if (k) k.revoked = true;
+        break;
+      }
+      case "PayeeSet":
+        payees[String(x.payee).toLowerCase()] = x.known;
+        break;
+    }
+  }
+  return {
+    events,
+    intents: [...intents.values()].sort((a, b) => Number(b.id - a.id)),
+    keys: [...keys.values()],
+    payees,
+    approvals,
+    loading,
+  };
 }
 
 export function useNow(ms = 1000) {
