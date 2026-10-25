@@ -1,3 +1,5 @@
+> ⚠️ **Outdated.** This plan describes the earlier "spend-policy vault + red-team" version of Fala. The product is now email approvals verified by Gmail's DKIM signature on Arc; the video plan needs to be redone for that story.
+
 # Fala — Pitch Video Plan (paste into Claude Design)
 
 > **Instruction to the designer/editor (Claude Design):** Build a 2:30 pitch video from this document. Everything you need is here: the message, the look, the assets, the exact on-screen text, the voice-over, the timing and the motion. Do not invent numbers, addresses or claims — use only what is in section 5. Where a scene says *screen capture*, create a faithful animated recreation of that UI using the design tokens in section 3 (or leave a clearly marked placeholder frame for a real recording). Output a storyboard first, then the finished video.
