@@ -14,11 +14,12 @@ export const Logo = ({ light }: { light?: boolean }) => (
 );
 
 const NAV = [
-  ["Overview", "#overview"],
+  ["How it works", "#how"],
+  ["Vault", "#overview"],
   ["Agents", "#agents"],
-  ["Approvals", "#approvals"],
-  ["Activity", "#activity"],
-  ["Red team", "#redteam"],
+  ["Requests", "#requests"],
+  ["Approve", "#approve"],
+  ["Forge", "#forge"],
 ] as const;
 
 export function NetworkBadge() {
@@ -100,8 +101,8 @@ export function Footer() {
       <div className="wrap">
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
           <Logo light />
-          {col("Dashboard", [["Overview", "#overview"], ["Agents", "#agents"], ["Approvals", "#approvals"], ["Activity", "#activity"]])}
-          {col("Get involved", [["Red team", "#redteam"], ["Simulate", "#simulate"]])}
+          {col("Vault", [["Overview", "#overview"], ["Agents", "#agents"], ["Requests", "#requests"], ["Activity", "#activity"]])}
+          {col("Try it", [["Approve with an email", "#approve"], ["Try to forge an approval", "#forge"]])}
           {col("Company", [["Privacy", "#"], ["Terms", "#"], ["FAQs", "#"]])}
           {col("Follow us", [["X / Twitter", "#"], ["GitHub", "#"], ["Reddit", "#"]])}
         </div>
