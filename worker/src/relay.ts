@@ -64,6 +64,6 @@ export async function relayRaw(raw: Uint8Array, d: RelayDeps): Promise<RelayResu
   else if (outcome.verb === "DENY") text = `Denied ❌ — request #${checked.id} will not be paid.\n${outcome.explorerUrl}`;
   else if (outcome.verb === "EXPIRED") text = `Request #${checked.id} had already expired, so it was closed instead of paid.\n${outcome.explorerUrl}`;
   else if (outcome.paid) text = `Paid ✅ ${info?.amount} USDC to ${who} — verified onchain against Google's DKIM key.\n${outcome.explorerUrl}`;
-  else text = `Approved, but the payout failed (payee may be blocked). Funds stay in the vault.\n${outcome.explorerUrl}`;
+  else text = `Approved, but the payout failed — the vault may be underfunded or the payee blocked. The funds stay in the vault and this request is closed; ask the agent to try again.\n${outcome.explorerUrl}`;
   return { kind: "done", outcome, text };
 }
