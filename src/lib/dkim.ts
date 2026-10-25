@@ -6,11 +6,13 @@
  * Bytes are handled as latin1 so the signed bytes round-trip exactly.
  */
 
+type Bytes = Uint8Array<ArrayBuffer>;
+
 export type Header = { name: string; value: string };
 
 export type ParsedEmail = {
-  headerBlock: Uint8Array;
-  sig: Uint8Array;
+  headerBlock: Bytes;
+  sig: Bytes;
   d: string;
   s: string;
   t: number;
@@ -19,7 +21,7 @@ export type ParsedEmail = {
   signedHeaders: string[];
 };
 
-export const latin1ToBytes = (s: string): Uint8Array => {
+export const latin1ToBytes = (s: string): Bytes => {
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
   return out;
@@ -30,13 +32,13 @@ export const bytesToLatin1 = (b: Uint8Array): string => {
   return s;
 };
 export const bytesToHex = (b: Uint8Array): `0x${string}` => ("0x" + [...b].map((x) => x.toString(16).padStart(2, "0")).join("")) as `0x${string}`;
-export const hexToBytes = (h: string): Uint8Array => {
+export const hexToBytes = (h: string): Bytes => {
   const s = h.startsWith("0x") ? h.slice(2) : h;
-  const out = new Uint8Array(s.length / 2);
+  const out: Bytes = new Uint8Array(s.length / 2);
   for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(2 * i, 2 * i + 2), 16);
   return out;
 };
-export const base64ToBytes = (b64: string): Uint8Array => {
+export const base64ToBytes = (b64: string): Bytes => {
   const bin = atob(b64.replace(/\s+/g, ""));
   return latin1ToBytes(bin);
 };
@@ -154,7 +156,7 @@ export function parseEmail(raw: string | Uint8Array, opts: ParseOptions = {}): P
 
 // ------------------------------------------------------------------ local verification (WebCrypto)
 
-export type DkimKeyMaterial = { spki: Uint8Array; n: Uint8Array; e: Uint8Array };
+export type DkimKeyMaterial = { spki: Bytes; n: Bytes; e: Bytes };
 
 /** Parse a DKIM DNS TXT record ("v=DKIM1; k=rsa; p=<base64 SPKI>") and export its modulus/exponent. */
 export async function keyFromTxt(txt: string): Promise<DkimKeyMaterial> {
@@ -178,7 +180,7 @@ export async function fetchDkimKey(domain: string, selector: string): Promise<Dk
 }
 
 /** RSASSA-PKCS1-v1_5 / SHA-256 over the header block — the same check the contract performs. */
-export async function verifyBlock(headerBlock: Uint8Array, sig: Uint8Array, spki: Uint8Array): Promise<boolean> {
+export async function verifyBlock(headerBlock: Bytes, sig: Bytes, spki: Bytes): Promise<boolean> {
   const key = await crypto.subtle.importKey("spki", spki, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
   return crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, sig, headerBlock);
 }
