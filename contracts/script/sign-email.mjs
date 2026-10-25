@@ -8,7 +8,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-const DIR = path.resolve("cache/fala-keys");
+const DIR = path.resolve(process.env.FALA_KEY_DIR ?? "cache/fala-keys");
 const keyPath = (name) => path.join(DIR, `test-key-${name}.pem`);
 
 function privateKey(name) {
@@ -36,6 +36,12 @@ function encodeBytesBytes(a, b) {
 
 const spec = JSON.parse(process.argv[2]);
 const key = privateKey(spec.key ?? "A");
+
+if (spec.mode === "keyhex") {
+  const jwk = crypto.createPublicKey(key).export({ format: "jwk" });
+  process.stdout.write(JSON.stringify({ n: "0x" + hex(Buffer.from(jwk.n, "base64url")), e: "0x" + hex(Buffer.from(jwk.e, "base64url")) }));
+  process.exit(0);
+}
 
 if (spec.mode === "key") {
   const jwk = crypto.createPublicKey(key).export({ format: "jwk" });
