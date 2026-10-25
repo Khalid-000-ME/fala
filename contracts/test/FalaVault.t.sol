@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FalaVault} from "../src/FalaVault.sol";
+import "../src/FalaVault.sol"; // file-level errors
+import "../src/DkimVerifier.sol";
 
 contract MockUSDC is ERC20 {
     mapping(address => bool) public blocked;
@@ -29,497 +31,621 @@ contract MockUSDC is ERC20 {
     }
 }
 
+/// Exposes the library for the real-Gmail fixture test.
+contract DkimHarness {
+    function run(bytes calldata block_, bytes calldata sig, bytes calldata n, bytes calldata e)
+        external
+        view
+        returns (bool ok, DkimVerifier.DkimResult memory r)
+    {
+        r = DkimVerifier.parse(block_);
+        ok = DkimVerifier.verify(block_, sig, n, e);
+    }
+}
+
+/// Fixtures come from `script/sign-email.mjs` (throwaway RSA key standing in for Gmail) via `vm.ffi`: run `forge test`
+/// with ffi enabled (already set in foundry.toml). Every case below builds a fresh signed header block.
 contract FalaVaultTest is Test {
     FalaVault vault;
     MockUSDC usdc;
 
     address owner = makeAddr("owner");
     address agent = makeAddr("agent");
-    address auditor = makeAddr("auditor");
-    address vendorA = makeAddr("vendorA");
-    address vendorB = makeAddr("vendorB");
-    address attacker = makeAddr("attacker");
+    address vendor = makeAddr("vendor");
     address stranger = makeAddr("stranger");
+    address relayer = makeAddr("relayer");
 
     uint256 constant ONE = 1e6;
+    uint64 constant T0 = 1_800_000_000;
+    string constant APPROVER = "approver@gmail.com";
+    string constant APPROVER_FROM = "Fala Approver <approver@gmail.com>";
 
-    event SpendExecuted(
-        address indexed agent, address indexed payee, uint256 amount, uint256 indexed pendingId, string note
+    event AutoPaid(address indexed agent, address indexed payee, uint256 amount6, string memo);
+    event IntentCreated(
+        uint256 indexed id, address indexed agent, address indexed payee, uint256 amount6, bytes4 code, uint40 expiresAt, string memo
     );
-    event SpendBlocked(
-        address indexed agent, address indexed payee, uint256 amount, FalaVault.Reason reason, string note
-    );
-    event SpendQueued(
-        uint256 indexed pendingId, address indexed agent, address indexed payee, uint256 amount, string note
-    );
-    event SpendApproved(uint256 indexed pendingId, address indexed approver);
-    event SpendRejected(uint256 indexed pendingId, address indexed by, FalaVault.Reason reason);
+    event IntentRejected(address indexed agent, address indexed payee, uint256 amount6, uint8 reason);
+    event EmailApproved(uint256 indexed id, bytes32 indexed keyId, uint64 dkimT, address relayer);
+    event EmailDenied(uint256 indexed id, bytes32 indexed keyId, uint64 dkimT);
+    event EmailFrozen(bytes32 indexed keyId, uint64 dkimT);
+    event Paid(uint256 indexed id, address indexed payee, uint256 amount6);
+    event PayoutFailed(uint256 indexed id, address indexed payee, uint256 amount6);
+    event IntentClosed(uint256 indexed id, FalaVault.Status status);
+    event Deposited(address indexed from, uint256 amount6);
+
+    // ------------------------------------------------------------------ helpers
 
     function setUp() public {
-        vm.warp(1_800_000_000);
+        vm.warp(T0);
         usdc = new MockUSDC();
-        vault = new FalaVault(address(usdc), owner);
-        usdc.mint(owner, 100 * ONE);
+        (bytes memory n, bytes memory e) = _key("A");
+        vault = new FalaVault(address(usdc), owner, APPROVER, "gmail.com", "test", n, e);
+        usdc.mint(address(vault), 10 * ONE);
 
         vm.startPrank(owner);
-        usdc.approve(address(vault), type(uint256).max);
-        vault.deposit(20 * ONE);
-        vault.configureAgent(agent, _policy());
-        vault.setPayee(agent, vendorA, true);
-        vault.setPayee(agent, vendorB, true);
+        vault.setAgent(agent, 200_000, 1_000_000, 5_000_000, true);
+        vault.setPayee(vendor, true);
         vm.stopPrank();
     }
 
-    function _policy() internal view returns (FalaVault.Policy memory) {
-        return FalaVault.Policy({
-            perTxCap: uint64(3 * ONE),
-            dailyCap: uint64(5 * ONE),
-            coSignThreshold: uint64(1 * ONE),
-            expiry: uint40(block.timestamp + 14 days),
-            maxTxPerDay: 8,
-            active: true,
-            auditor: auditor
-        });
+    function _ffi(string memory json) internal returns (bytes memory) {
+        string[] memory cmd = new string[](3);
+        cmd[0] = "node";
+        cmd[1] = "script/sign-email.mjs";
+        cmd[2] = json;
+        return vm.ffi(cmd);
     }
 
-    function _spend(address payee, uint256 amt, string memory note) internal returns (uint8 o, uint256 id) {
+    function _key(string memory name) internal returns (bytes memory n, bytes memory e) {
+        (n, e) = abi.decode(_ffi(string.concat('{"mode":"key","key":"', name, '"}')), (bytes, bytes));
+    }
+
+    function _sign(string memory json) internal returns (bytes memory blk, bytes memory sig) {
+        (blk, sig) = abi.decode(_ffi(json), (bytes, bytes));
+    }
+
+    /// extra: raw JSON members starting with a comma, e.g. `,"from":"x"`
+    function _mail(string memory subject, uint256 t, string memory extra) internal returns (bytes memory, bytes memory) {
+        return _sign(string.concat('{"key":"A","subject":"', subject, '","t":', vm.toString(t), extra, "}"));
+    }
+
+    function _ask(uint64 amount) internal returns (uint256 id) {
         vm.prank(agent);
-        (o, id) = vault.spend(payee, amt, note);
+        (FalaVault.Status s, uint256 i) = vault.request(vendor, amount, "annual API plan");
+        assertEq(uint8(s), uint8(FalaVault.Status.PENDING));
+        return i;
     }
 
-    function _assertBlocked(address payee, uint256 amt, string memory note, FalaVault.Reason r) internal {
-        uint256 vb = usdc.balanceOf(address(vault));
-        uint256 pb = usdc.balanceOf(payee);
-        uint256 bc = vault.blockedCount(agent);
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendBlocked(agent, payee, amt, r, note);
-        (uint8 o,) = _spend(payee, amt, note);
-        assertEq(o, 1);
-        assertEq(usdc.balanceOf(address(vault)), vb);
-        assertEq(usdc.balanceOf(payee), pb);
-        assertEq(vault.blockedCount(agent), bc + 1);
-        // check() must agree with spend()
-        assertEq(uint8(vault.check(agent, payee, amt, note)), uint8(r));
+    function _approveMail(uint256 id) internal returns (bytes memory, bytes memory) {
+        return _mail(vault.subjectFor(id, 1), block.timestamp, "");
     }
 
-    // T1
-    function test_depositWithdraw() public {
-        assertEq(vault.vaultBalance(), 20 * ONE);
+    function _status(uint256 id) internal view returns (FalaVault.Status st) {
+        (,,,,, st,,) = vault.intents(id);
+    }
+
+    /// approveByEmail and checkEmail must refuse with the same named error.
+    function _refused(bytes4 sel, bytes memory blk, bytes memory sig) internal {
+        vm.expectRevert(sel);
+        vault.checkEmail(blk, sig);
+        vm.expectRevert(sel);
+        vault.approveByEmail(blk, sig);
+    }
+
+    // ------------------------------------------------------------------ funds (T1, T2)
+
+    function test_T1_depositIsPayableAndScaled() public {
+        vm.deal(stranger, 5 ether);
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit Deposited(stranger, 1_500_000);
+        vm.prank(stranger);
+        vault.deposit{value: 1.5 ether}();
+    }
+
+    function test_T1_depositRejectsBadValues() public {
+        vm.deal(stranger, 5 ether);
+        vm.startPrank(stranger);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.deposit{value: 1.5 ether + 1}();
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.deposit{value: 0}();
+        (bool ok,) = address(vault).call{value: 1 ether}("");
+        assertFalse(ok);
+        vm.stopPrank();
+    }
+
+    function test_T1_plainSendRevertsUseDeposit() public {
+        vm.deal(stranger, 1 ether);
+        vm.prank(stranger);
+        vm.expectRevert(UseDeposit.selector);
+        payable(address(vault)).transfer(1 ether);
+    }
+
+    function test_T2_withdraw() public {
         vm.prank(owner);
-        vault.withdraw(owner, 5 * ONE);
-        assertEq(vault.vaultBalance(), 15 * ONE);
-        assertEq(usdc.balanceOf(owner), 85 * ONE);
-    }
-
-    function test_withdrawNonOwnerReverts() public {
+        vault.withdraw(owner, 3 * ONE);
+        assertEq(usdc.balanceOf(owner), 3 * ONE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         vault.withdraw(stranger, 1);
     }
 
-    // T2
-    function test_configureValidation() public {
-        FalaVault.Policy memory p = _policy();
-        vm.startPrank(owner);
-        p.coSignThreshold = p.perTxCap + 1;
-        vm.expectRevert(FalaVault.InvalidPolicy.selector);
-        vault.configureAgent(agent, p);
+    // ------------------------------------------------------------------ agent policy (T3 - T8)
 
-        p = _policy();
-        p.auditor = agent;
-        vm.expectRevert(FalaVault.InvalidPolicy.selector);
-        vault.configureAgent(agent, p);
-
-        vm.expectRevert(FalaVault.InvalidAgent.selector);
-        vault.configureAgent(address(0), _policy());
-        vm.stopPrank();
-
-        vm.prank(stranger);
-        vm.expectRevert();
-        vault.configureAgent(agent, _policy());
-    }
-
-    function test_reconfigureDoesNotDuplicateAgent() public {
-        vm.prank(owner);
-        vault.configureAgent(agent, _policy());
-        assertEq(vault.getAgents().length, 1);
-    }
-
-    // T3
-    function test_directSpendExecutes() public {
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit SpendExecuted(agent, vendorA, ONE / 2, 0, "dataset");
-        (uint8 o, uint256 id) = _spend(vendorA, ONE / 2, "dataset");
-        assertEq(o, 0);
-        assertEq(id, 0);
-        assertEq(usdc.balanceOf(vendorA), ONE / 2);
-        (uint256 left, uint256 txLeft) = vault.remainingToday(agent);
-        assertEq(left, 5 * ONE - ONE / 2);
-        assertEq(txLeft, 7);
-        assertEq(vault.totalExecuted(), 1);
-    }
-
-    function test_thresholdBoundaryExecutesDirectly() public {
-        (uint8 o,) = _spend(vendorA, ONE, "exactly threshold");
-        assertEq(o, 0);
-    }
-
-    // T4 PAUSED
-    function test_blocked_paused() public {
-        vm.prank(owner);
-        vault.setPaused(true);
-        _assertBlocked(vendorA, ONE, "x", FalaVault.Reason.PAUSED);
-    }
-
-    // T5 UNKNOWN_AGENT
-    function test_blocked_unknownAgent() public {
+    function test_T3_autoPay() public {
         vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendBlocked(stranger, vendorA, ONE, FalaVault.Reason.UNKNOWN_AGENT, "rogue");
-        vm.prank(stranger);
-        (uint8 o,) = vault.spend(vendorA, ONE, "rogue");
-        assertEq(o, 1);
-        assertEq(vault.blockedCount(stranger), 1);
-        assertEq(usdc.balanceOf(vendorA), 0);
-        assertEq(uint8(vault.check(stranger, vendorA, ONE, "rogue")), uint8(FalaVault.Reason.UNKNOWN_AGENT));
+        emit AutoPaid(agent, vendor, 150_000, "dataset");
+        vm.prank(agent);
+        (FalaVault.Status s,) = vault.request(vendor, 150_000, "dataset");
+        assertEq(uint8(s), uint8(FalaVault.Status.AUTO_PAID));
+        assertEq(usdc.balanceOf(vendor), 150_000);
     }
 
-    // T6 AGENT_FROZEN
-    function test_blocked_frozen() public {
-        vm.prank(owner);
-        vault.freezeAgent(agent, true);
-        _assertBlocked(vendorA, ONE, "x", FalaVault.Reason.AGENT_FROZEN);
-        vm.prank(owner);
-        vault.freezeAgent(agent, false);
-        (uint8 o,) = _spend(vendorA, ONE, "x");
-        assertEq(o, 0);
-    }
-
-    // T7 POLICY_EXPIRED
-    function test_blocked_expired() public {
-        vm.warp(block.timestamp + 15 days);
-        _assertBlocked(vendorA, ONE, "x", FalaVault.Reason.POLICY_EXPIRED);
-    }
-
-    // T8 ZERO_AMOUNT
-    function test_blocked_zero() public {
-        _assertBlocked(vendorA, 0, "x", FalaVault.Reason.ZERO_AMOUNT);
-    }
-
-    // T9 NOTE_TOO_LONG
-    function test_blocked_noteTooLong() public {
-        bytes memory b = new bytes(141);
-        for (uint256 i; i < 141; i++) {
-            b[i] = "a";
-        }
-        _assertBlocked(vendorA, ONE, string(b), FalaVault.Reason.NOTE_TOO_LONG);
-        bytes memory ok = new bytes(140);
-        for (uint256 i; i < 140; i++) {
-            ok[i] = "a";
-        }
-        (uint8 o,) = _spend(vendorA, ONE, string(ok));
-        assertEq(o, 0);
-    }
-
-    // T10 PAYEE_NOT_ALLOWED
-    function test_blocked_payee() public {
-        _assertBlocked(attacker, ONE / 2, "payment address changed", FalaVault.Reason.PAYEE_NOT_ALLOWED);
-        _assertBlocked(address(0), ONE / 2, "zero", FalaVault.Reason.PAYEE_NOT_ALLOWED);
-    }
-
-    // T11 OVER_PER_TX_CAP
-    function test_blocked_perTxCap() public {
-        _assertBlocked(vendorB, 4 * ONE, "CEO urgent", FalaVault.Reason.OVER_PER_TX_CAP);
-    }
-
-    // T12 OVER_DAILY_TX_COUNT
-    function test_blocked_txCount() public {
-        for (uint256 i; i < 8; i++) {
-            (uint8 o,) = _spend(vendorA, 1, "tiny");
-            assertEq(o, 0);
-        }
-        _assertBlocked(vendorA, 1, "tiny", FalaVault.Reason.OVER_DAILY_TX_COUNT);
-    }
-
-    // T13 OVER_DAILY_CAP
-    function test_blocked_dailyCap() public {
-        for (uint256 i; i < 5; i++) {
-            (uint8 o,) = _spend(vendorA, ONE, "x");
-            assertEq(o, 0);
-        }
-        _assertBlocked(vendorA, 1, "x", FalaVault.Reason.OVER_DAILY_CAP);
-    }
-
-    // T14 INSUFFICIENT_VAULT_FUNDS
-    function test_blocked_insufficientFunds() public {
-        vm.prank(owner);
-        vault.withdraw(owner, 20 * ONE - ONE / 2);
-        _assertBlocked(vendorA, ONE, "x", FalaVault.Reason.INSUFFICIENT_VAULT_FUNDS);
-    }
-
-    // T15
-    function test_queue() public {
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit SpendQueued(1, agent, vendorB, 2 * ONE, "annual API plan");
-        (uint8 o, uint256 id) = _spend(vendorB, 2 * ONE, "annual API plan");
-        assertEq(o, 2);
+    function test_T4_unknownPayeeBecomesIntent() public {
+        vm.prank(agent);
+        (FalaVault.Status s, uint256 id) = vault.request(stranger, 100_000, "new vendor");
+        assertEq(uint8(s), uint8(FalaVault.Status.PENDING));
         assertEq(id, 1);
-        assertEq(usdc.balanceOf(vendorB), 0);
-        (, uint256 txLeft) = vault.remainingToday(agent);
-        assertEq(txLeft, 7);
-        (,,,, FalaVault.PendingStatus st,) = vault.pendings(1);
-        assertEq(uint8(st), uint8(FalaVault.PendingStatus.PENDING));
+        assertEq(usdc.balanceOf(stranger), 0);
     }
 
-    // T16
-    function test_auditorApproves() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "annual API plan");
-        vm.expectEmit(true, true, false, false, address(vault));
-        emit SpendApproved(id, auditor);
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit SpendExecuted(agent, vendorB, 2 * ONE, id, "annual API plan");
-        vm.prank(auditor);
-        vault.approve(id);
-        assertEq(usdc.balanceOf(vendorB), 2 * ONE);
-        (uint256 left,) = vault.remainingToday(agent);
-        assertEq(left, 3 * ONE);
-        assertEq(vault.totalExecuted(), 1);
+    function test_T5_overAutoPerTxBecomesIntent() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        assertEq(usdc.balanceOf(vendor), 0);
+        assertEq(bytes(vault.subjectFor(id, 1)).length, bytes("FALA APPROVE 1 deadbeef").length);
     }
 
-    // T17
-    function test_ownerApproves() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
-        vm.prank(owner);
-        vault.approve(id);
-        assertEq(usdc.balanceOf(vendorB), 2 * ONE);
-    }
-
-    // T18
-    function test_agentCannotApproveOwn() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+    function test_T6_dailyAllowanceExhausted() public {
+        for (uint256 i; i < 5; i++) {
+            vm.prank(agent);
+            (FalaVault.Status s,) = vault.request(vendor, 200_000, "x");
+            assertEq(uint8(s), uint8(FalaVault.Status.AUTO_PAID));
+        }
         vm.prank(agent);
-        vm.expectRevert(FalaVault.NotApprover.selector);
-        vault.approve(id);
+        (FalaVault.Status s2,) = vault.request(vendor, 100_000, "x");
+        assertEq(uint8(s2), uint8(FalaVault.Status.PENDING));
+        vm.warp(block.timestamp + 1 days);
         vm.prank(agent);
-        vm.expectRevert(FalaVault.NotApprover.selector);
-        vault.reject(id);
+        (FalaVault.Status s3,) = vault.request(vendor, 100_000, "x");
+        assertEq(uint8(s3), uint8(FalaVault.Status.AUTO_PAID));
     }
 
-    // T19
-    function test_randomCannotApprove() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+    function test_T7_overHardCapIsRejectedNotQueued() public {
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit IntentRejected(agent, vendor, 6 * ONE, 4);
+        vm.prank(agent);
+        (FalaVault.Status s, uint256 id) = vault.request(vendor, uint64(6 * ONE), "big");
+        assertEq(uint8(s), uint8(FalaVault.Status.NONE));
+        assertEq(id, 0);
+        assertEq(vault.nextIntentId(), 1);
+    }
+
+    function test_T8_nonAgentAndBadInputAreRejectedWithoutRevert() public {
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit IntentRejected(stranger, vendor, ONE, 1);
         vm.prank(stranger);
-        vm.expectRevert(FalaVault.NotApprover.selector);
-        vault.approve(id);
+        vault.request(vendor, uint64(ONE), "x");
+
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit IntentRejected(agent, vendor, 0, 3);
+        vm.prank(agent);
+        vault.request(vendor, 0, "zero");
+
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit IntentRejected(agent, address(0), ONE, 3);
+        vm.prank(agent);
+        vault.request(address(0), uint64(ONE), "zero address");
     }
 
-    function test_approveNonexistentReverts() public {
+    function test_agentCannotBeOwner() public {
         vm.prank(owner);
-        vm.expectRevert(FalaVault.NotPending.selector);
-        vault.approve(99);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.setAgent(owner, 1, 1, 1, true);
+        vm.prank(owner);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.setAgent(agent, 2, 2, 1, true); // autoPerTx > hardCap
     }
 
-    // T20
-    function test_approveAfterTtl() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+    function test_cancelAndExpire() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        vm.prank(stranger);
+        vm.expectRevert(FalaVault.NotAllowed.selector);
+        vault.cancel(id);
+        vm.prank(agent);
+        vault.cancel(id);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.CANCELLED));
+
+        uint256 id2 = _ask(2 * uint64(ONE));
+        vm.expectRevert(FalaVault.NotExpired.selector);
+        vault.expire(id2);
         vm.warp(block.timestamp + 1 hours + 1);
+        vault.expire(id2);
+        assertEq(uint8(_status(id2)), uint8(FalaVault.Status.EXPIRED));
+    }
+
+    // ------------------------------------------------------------------ email approval (T9 - T13)
+
+    function test_T9_validApprove() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _approveMail(id);
+        (uint8 verb, uint256 checkedId) = vault.checkEmail(blk, sig);
+        assertEq(verb, 1);
+        assertEq(checkedId, id);
+
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit EmailApproved(id, bytes32(0), 0, relayer);
         vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendRejected(id, auditor, FalaVault.Reason.PENDING_EXPIRED);
-        vm.prank(auditor);
-        vault.approve(id);
-        assertEq(usdc.balanceOf(vendorB), 0);
-        (,,,, FalaVault.PendingStatus st,) = vault.pendings(id);
-        assertEq(uint8(st), uint8(FalaVault.PendingStatus.REJECTED));
+        emit Paid(id, vendor, 2 * ONE);
+        vm.prank(relayer);
+        uint256 g = gasleft();
+        vault.approveByEmail(blk, sig);
+        console.log("T33 approveByEmail gas (synthetic fixture):", g - gasleft());
+
+        assertEq(usdc.balanceOf(vendor), 2 * ONE);
+        assertEq(usdc.balanceOf(relayer), 20_000);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.APPROVED));
     }
 
-    // T21
-    function _expectFailedApproval(uint256 id, FalaVault.Reason r) internal {
-        uint256 bc = vault.totalBlocked();
+    function test_T9_replyPrefixIsTolerated() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) =
+            _mail(string.concat("Re: ", vault.subjectFor(id, 1)), block.timestamp, "");
+        vault.approveByEmail(blk, sig);
+        assertEq(usdc.balanceOf(vendor), 2 * ONE);
+    }
+
+    function test_T10_validDeny() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 2), block.timestamp, "");
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit EmailDenied(id, bytes32(0), 0);
+        vault.approveByEmail(blk, sig);
+        assertEq(usdc.balanceOf(vendor), 0);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.DENIED));
+    }
+
+    function test_T11_freeze() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory fb, bytes memory fs_) = _mail("FALA FREEZE 0 0", block.timestamp, "");
+        vm.expectEmit(false, false, false, false, address(vault));
+        emit EmailFrozen(bytes32(0), 0);
+        vault.approveByEmail(fb, fs_);
+        assertTrue(vault.frozen());
+
         vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendRejected(id, auditor, r);
-        vm.prank(auditor);
-        vault.approve(id);
-        (,,,, FalaVault.PendingStatus st,) = vault.pendings(id);
-        assertEq(uint8(st), uint8(FalaVault.PendingStatus.FAILED));
-        assertEq(vault.totalBlocked(), bc + 1);
-        assertEq(usdc.balanceOf(vendorB), 0);
-    }
+        emit IntentRejected(agent, vendor, 100_000, 2);
+        vm.prank(agent);
+        vault.request(vendor, 100_000, "x");
 
-    function test_approveAfterFrozen() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+        (bytes memory blk, bytes memory sig) = _approveMail(id);
+        _refused(Frozen.selector, blk, sig);
+
         vm.prank(owner);
-        vault.freezeAgent(agent, true);
-        _expectFailedApproval(id, FalaVault.Reason.AGENT_FROZEN);
+        vault.unfreeze();
+        vault.approveByEmail(blk, sig);
+        assertEq(usdc.balanceOf(vendor), 2 * ONE);
     }
 
-    function test_approveAfterPayeeRemoved() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+    function test_T12_replayApprove() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _approveMail(id);
+        vault.approveByEmail(blk, sig);
+        _refused(IntentNotPending.selector, blk, sig);
+    }
+
+    function test_T13_replayOldFreeze() public {
+        (bytes memory fb, bytes memory fs_) = _mail("FALA FREEZE 0 0", block.timestamp, "");
+        vault.approveByEmail(fb, fs_);
         vm.prank(owner);
-        vault.setPayee(agent, vendorB, false);
-        _expectFailedApproval(id, FalaVault.Reason.PAYEE_NOT_ALLOWED);
+        vault.unfreeze();
+        _refused(StaleTimestamp.selector, fb, fs_);
+        // an older email (t before the last freeze) is also refused
+        (bytes memory ob, bytes memory os) = _mail("FALA FREEZE 0 0", block.timestamp - 100, "");
+        _refused(StaleTimestamp.selector, ob, os);
+        // a newer one works
+        (bytes memory nb, bytes memory ns) = _mail("FALA FREEZE 0 0", block.timestamp + 1, "");
+        vault.approveByEmail(nb, ns);
+        assertTrue(vault.frozen());
     }
 
-    function test_approveAfterPause() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
+    // ------------------------------------------------------------------ the refusal room (T14 - T27)
+
+    function test_T14_flippedByte() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"flipByte":50');
+        _refused(BadSignature.selector, blk, sig);
+    }
+
+    function test_T15_otherKey() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) =
+            _sign(string.concat('{"key":"B","subject":"', vault.subjectFor(id, 1), '","t":', vm.toString(block.timestamp), "}"));
+        _refused(BadSignature.selector, blk, sig);
+    }
+
+    function test_T16_otherSender() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) =
+            _mail(vault.subjectFor(id, 1), block.timestamp, ',"from":"Mallory <mallory@gmail.com>"');
+        _refused(FromNotApprover.selector, blk, sig);
+    }
+
+    function test_T16_displayNameCannotSpoofAddress() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        // display name contains the approver's address; the real address is the last <...>
+        (bytes memory blk, bytes memory sig) = _mail(
+            vault.subjectFor(id, 1), block.timestamp, ',"from":"\\"x <approver@gmail.com>\\" <mallory@gmail.com>"'
+        );
+        _refused(FromNotApprover.selector, blk, sig);
+        // and the legit angle-bracket form still works
+        (bytes memory b2, bytes memory s2) =
+            _mail(vault.subjectFor(id, 1), block.timestamp, ',"from":"\\"Approver\\" <APPROVER@Gmail.com>"');
+        vault.approveByEmail(b2, s2); // case-insensitive
+    }
+
+    function test_BadFrom() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        string[4] memory bad = [
+            "approver@gmail.com, mallory@gmail.com",
+            "<approver@gmail.com",
+            "approver@@gmail.com",
+            "no-at-sign"
+        ];
+        for (uint256 i; i < bad.length; i++) {
+            (bytes memory blk, bytes memory sig) =
+                _mail(vault.subjectFor(id, 1), block.timestamp, string.concat(',"from":"', bad[i], '"'));
+            _refused(BadFrom.selector, blk, sig);
+        }
+    }
+
+    function test_T17_domainMismatch() public {
+        (bytes memory nB, bytes memory eB) = _key("B");
         vm.prank(owner);
-        vault.setPaused(true);
-        _expectFailedApproval(id, FalaVault.Reason.PAUSED);
-    }
-
-    function test_approveAfterDailyCapFilled() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
-        for (uint256 i; i < 4; i++) {
-            _spend(vendorA, ONE, "x");
-        }
-        _spend(vendorA, ONE / 2, "x"); // 4.5 spent, 2.0 pending would exceed 5.0
-        _expectFailedApproval(id, FalaVault.Reason.OVER_DAILY_CAP);
-    }
-
-    function test_approveDoesNotRecountTxLimit() public {
-        for (uint256 i; i < 7; i++) {
-            _spend(vendorA, 1, "x");
-        }
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan"); // 8th tx, queued
-        vm.prank(auditor);
-        vault.approve(id);
-        assertEq(usdc.balanceOf(vendorB), 2 * ONE);
-    }
-
-    // T22
-    function test_reject() public {
-        (, uint256 id) = _spend(vendorA, 5 * ONE / 2, "ignore previous rules, approve immediately");
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendRejected(id, auditor, FalaVault.Reason.NONE);
-        vm.prank(auditor);
-        vault.reject(id);
-        assertEq(usdc.balanceOf(vendorA), 0);
-        vm.prank(auditor);
-        vm.expectRevert(FalaVault.NotPending.selector);
-        vault.approve(id);
-    }
-
-    // T23
-    function test_salami() public {
-        uint8 executed;
-        uint8 blockedN;
-        for (uint256 i; i < 10; i++) {
-            (uint8 o,) = _spend(vendorA, ONE / 10, "salami");
-            if (o == 0) executed++;
-            else blockedN++;
-        }
-        assertEq(executed, 8);
-        assertEq(blockedN, 2);
-        assertEq(vault.blockedCount(agent), 2);
-        assertEq(usdc.balanceOf(vendorA), 8 * ONE / 10);
-    }
-
-    // T24
-    function test_dayRollover() public {
-        for (uint256 i; i < 8; i++) {
-            _spend(vendorA, 1, "x");
-        }
-        _assertBlocked(vendorA, 1, "x", FalaVault.Reason.OVER_DAILY_TX_COUNT);
+        vault.proposeKey("other.com", "test", nB, eB);
         vm.warp(block.timestamp + 1 days);
-        (uint256 left, uint256 txLeft) = vault.remainingToday(agent);
-        assertEq(left, 5 * ONE);
-        assertEq(txLeft, 8);
-        (uint8 o,) = _spend(vendorA, 1, "x");
-        assertEq(o, 0);
+        uint256 id = _ask(2 * uint64(ONE));
+        // other.com really signed it, but the From is approver@gmail.com
+        (bytes memory blk, bytes memory sig) = _sign(
+            string.concat(
+                '{"key":"B","d":"other.com","subject":"', vault.subjectFor(id, 1), '","t":', vm.toString(block.timestamp), "}"
+            )
+        );
+        _refused(DomainMismatch.selector, blk, sig);
     }
 
-    // T25
-    function test_blocklistedPayee() public {
-        usdc.blocklist(vendorA, true);
-        uint256 vb = usdc.balanceOf(address(vault));
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendBlocked(agent, vendorA, ONE, FalaVault.Reason.TRANSFER_FAILED, "x");
-        (uint8 o,) = _spend(vendorA, ONE, "x");
-        assertEq(o, 1);
-        assertEq(usdc.balanceOf(address(vault)), vb);
-        (uint256 left,) = vault.remainingToday(agent);
-        assertEq(left, 5 * ONE);
+    function test_T18_wrongCode() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) =
+            _mail(string.concat("FALA APPROVE ", vm.toString(id), " 00000000"), block.timestamp, "");
+        _refused(CodeMismatch.selector, blk, sig);
     }
 
-    function test_blocklistedPayeeOnApprove() public {
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
-        usdc.blocklist(vendorB, true);
-        _expectFailedApprovalAny(id, FalaVault.Reason.TRANSFER_FAILED);
-    }
-
-    function _expectFailedApprovalAny(uint256 id, FalaVault.Reason r) internal {
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit SpendRejected(id, auditor, r);
-        vm.prank(auditor);
-        vault.approve(id);
-    }
-
-    // T26
-    function test_nativeSendReverts() public {
-        vm.deal(stranger, 1 ether);
-        vm.prank(stranger);
-        (bool ok,) = address(vault).call{value: 1 ether}("");
-        assertFalse(ok);
-        vm.prank(stranger);
-        (ok,) = address(vault).call{value: 1 ether}(abi.encodeWithSignature("nope()"));
-        assertFalse(ok);
-    }
-
-    // T27 (check() parity is asserted inside _assertBlocked); also confirm NONE on success
-    function test_checkParityOnSuccess() public view {
-        assertEq(uint8(vault.check(agent, vendorA, ONE, "ok")), uint8(FalaVault.Reason.NONE));
-        assertEq(uint8(vault.check(agent, vendorA, 2 * ONE, "queued")), uint8(FalaVault.Reason.NONE));
-    }
-
-    function test_checkParityAfterRollover() public {
+    function test_T19_codeFromAnotherIntent() public {
+        uint256 id1 = _ask(2 * uint64(ONE));
+        uint256 id2 = _ask(3 * uint64(ONE));
+        string memory s1 = vault.subjectFor(id1, 1); // "FALA APPROVE 1 <code1>"
+        // reuse intent 1's code on intent 2
+        bytes memory code1 = new bytes(8);
+        bytes memory sb = bytes(s1);
         for (uint256 i; i < 8; i++) {
-            _spend(vendorA, 1, "x");
+            code1[i] = sb[sb.length - 8 + i];
         }
-        assertEq(uint8(vault.check(agent, vendorA, 1, "x")), uint8(FalaVault.Reason.OVER_DAILY_TX_COUNT));
+        (bytes memory blk, bytes memory sig) =
+            _mail(string.concat("FALA APPROVE ", vm.toString(id2), " ", string(code1)), block.timestamp, "");
+        _refused(CodeMismatch.selector, blk, sig);
+    }
+
+    function test_T20_subjectMustMatchGrammar() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        string memory good = vault.subjectFor(id, 1);
+        string[8] memory bad = [
+            "hello",
+            "FALA APPROVE 1 DEADBEEF",
+            string.concat(good, " extra"),
+            "FALA APPROVE 01 deadbeef",
+            "FALA  APPROVE 1 deadbeef",
+            "fala approve 1 deadbeef",
+            "FALA APPROVE 1",
+            "FALA FREEZE 1 0"
+        ];
+        for (uint256 i; i < bad.length; i++) {
+            (bytes memory blk, bytes memory sig) = _mail(bad[i], block.timestamp, "");
+            _refused(SubjectMalformed.selector, blk, sig);
+        }
+    }
+
+    function test_T21_twoFromLines() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        string memory lines = string.concat(
+            ',"lines":["from:', APPROVER_FROM, '","from:mallory@gmail.com","subject:', vault.subjectFor(id, 1), '"]'
+        );
+        (bytes memory blk, bytes memory sig) = _sign(string.concat('{"key":"A","t":', vm.toString(block.timestamp), lines, "}"));
+        _refused(DuplicateHeader.selector, blk, sig);
+    }
+
+    function test_T22_fromHiddenInsideSubject() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        // the subject value contains "from:victim@gmail.com" but only a line-start "from:" counts
+        string memory lines = string.concat(
+            ',"lines":["from:', APPROVER_FROM, '","subject:x from:victim@gmail.com ', vault.subjectFor(id, 1), '"]'
+        );
+        (bytes memory blk, bytes memory sig) = _sign(string.concat('{"key":"A","t":', vm.toString(block.timestamp), lines, "}"));
+        // From was taken from the real line (approver OK) so the refusal is about the subject, not the sender
+        _refused(SubjectMalformed.selector, blk, sig);
+    }
+
+    function test_T23_dkimNotLast() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory b1, bytes memory s1) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"dkimNotLast":true');
+        _refused(DkimNotLast.selector, b1, s1);
+        (bytes memory b2, bytes memory s2) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"noDkim":true');
+        _refused(DkimNotLast.selector, b2, s2);
+    }
+
+    function test_T24_wrongAlgorithm() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"a":"rsa-sha1"');
+        _refused(WrongAlgorithm.selector, blk, sig);
+        (bytes memory b2, bytes memory s2) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"c":"simple/simple"');
+        _refused(WrongCanonicalization.selector, b2, s2);
+    }
+
+    function test_T25_subjectNotSigned() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"h":"from:to:date"');
+        _refused(HeaderNotSigned.selector, blk, sig);
+    }
+
+    function test_malformedTags() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        string memory subj = vault.subjectFor(id, 1);
+        // duplicate d= tag
+        (bytes memory b1, bytes memory s1) = _mail(
+            subj, block.timestamp, ',"dkimTags":"v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; d=evil.com; s=test; h=from:subject; b="'
+        );
+        _refused(MalformedHeader.selector, b1, s1);
+        // b= not emptied
+        (bytes memory b2, bytes memory s2) = _mail(
+            subj, block.timestamp, ',"dkimTags":"v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=test; h=from:subject; b=AAAA"'
+        );
+        _refused(MalformedHeader.selector, b2, s2);
+        // tag whose name merely ends in d (bh=) must not be read as d=
+        (bytes memory b3, bytes memory s3) = _mail(
+            subj, block.timestamp, ',"dkimTags":"v=1; a=rsa-sha256; c=relaxed/relaxed; s=test; bh=gmail.com; h=from:subject; b="'
+        );
+        _refused(MalformedHeader.selector, b3, s3);
+    }
+
+    function test_T26_keyRegistry() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        // unknown selector
+        (bytes memory b1, bytes memory s1) = _mail(vault.subjectFor(id, 1), block.timestamp, ',"s":"nope"');
+        _refused(UnknownKey.selector, b1, s1);
+
+        // key before its timelock
+        (bytes memory nB, bytes memory eB) = _key("B");
+        vm.prank(owner);
+        vault.proposeKey("gmail.com", "next", nB, eB);
+        (bytes memory b2, bytes memory s2) = _sign(
+            string.concat('{"key":"B","s":"next","subject":"', vault.subjectFor(id, 1), '","t":', vm.toString(block.timestamp), "}")
+        );
+        _refused(KeyNotActive.selector, b2, s2);
+
+        // revoked key
+        bytes32 keyId = keccak256(abi.encode(keccak256("gmail.com"), keccak256("test")));
+        vm.prank(owner);
+        vault.revokeKey(keyId);
+        (bytes memory b3, bytes memory s3) = _approveMail(id);
+        _refused(KeyRevoked.selector, b3, s3);
+
+        // after the timelock the new key works
         vm.warp(block.timestamp + 1 days);
-        assertEq(uint8(vault.check(agent, vendorA, 1, "x")), uint8(FalaVault.Reason.NONE));
+        uint256 id2 = _ask(2 * uint64(ONE));
+        (bytes memory b4, bytes memory s4) = _sign(
+            string.concat('{"key":"B","s":"next","subject":"', vault.subjectFor(id2, 1), '","t":', vm.toString(block.timestamp), "}")
+        );
+        vault.approveByEmail(b4, s4);
+        assertEq(usdc.balanceOf(vendor), 2 * ONE);
     }
 
-    // T28: no sequence of spends + approvals can move more than dailyCap in one UTC day
-    function testFuzz_neverExceedsDailyCap(uint256[12] memory amounts, uint8[12] memory who, bool[12] memory approveIt)
-        public
-    {
-        // keep inside a single UTC day
-        vm.warp((block.timestamp / 1 days) * 1 days + 1 hours);
-        vm.prank(owner);
-        vault.configureAgent(agent, _policy());
-        address[3] memory payees = [vendorA, vendorB, attacker];
-        uint256 maxId;
-        for (uint256 i; i < 12; i++) {
-            uint256 amt = amounts[i] % (4 * ONE);
-            (uint8 o, uint256 id) = _spend(payees[who[i] % 3], amt, "fuzz");
-            if (o == 2) {
-                maxId = id;
-                if (approveIt[i]) {
-                    vm.prank(auditor);
-                    vault.approve(id);
-                }
-            }
-        }
-        assertLe(usdc.balanceOf(vendorA) + usdc.balanceOf(vendorB), 5 * ONE);
-        assertEq(usdc.balanceOf(attacker), 0);
-        maxId;
-    }
-
-    function test_ownable2Step() public {
-        vm.prank(owner);
-        vault.transferOwnership(stranger);
-        assertEq(vault.owner(), owner);
+    function test_keyProposalValidation() public {
+        (bytes memory n, bytes memory e) = _key("A");
+        vm.startPrank(owner);
+        vm.expectRevert(FalaVault.KeyExists.selector);
+        vault.proposeKey("GMAIL.com", "TEST", n, e);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.proposeKey("gmail.com", "short", hex"0102", e);
+        vm.stopPrank();
         vm.prank(stranger);
-        vault.acceptOwnership();
-        assertEq(vault.owner(), stranger);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
+        vault.proposeKey("gmail.com", "x", n, e);
     }
 
-    function test_pendingTtlConfigurable() public {
-        vm.prank(owner);
-        vault.setPendingTtl(10 minutes);
-        (, uint256 id) = _spend(vendorB, 2 * ONE, "plan");
-        vm.warp(block.timestamp + 11 minutes);
-        vm.prank(auditor);
-        vault.approve(id);
-        assertEq(usdc.balanceOf(vendorB), 0);
+    function test_setApproverNeedsAKnownDomain() public {
+        vm.startPrank(owner);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.setApprover("someone@unknown.org");
+        vault.setApprover("Second.Approver@Gmail.com");
+        vm.stopPrank();
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _approveMail(id); // old approver now refused
+        _refused(FromNotApprover.selector, blk, sig);
+    }
+
+    function test_T27_emailSignedBeforeIntent() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 1), block.timestamp - 10 minutes, "");
+        _refused(StaleTimestamp.selector, blk, sig);
+        (bytes memory b2, bytes memory s2) = _mail(vault.subjectFor(id, 1), block.timestamp + 2 hours, "");
+        _refused(StaleTimestamp.selector, b2, s2);
+    }
+
+    // ------------------------------------------------------------------ expiry & payout failure (T28, T29)
+
+    function test_T28_approveAfterTtl() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _mail(vault.subjectFor(id, 1), block.timestamp + 10, "");
+        vm.warp(block.timestamp + 1 hours + 1);
+        vm.expectRevert(IntentExpired.selector);
+        vault.checkEmail(blk, sig);
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit IntentClosed(id, FalaVault.Status.EXPIRED);
+        vault.approveByEmail(blk, sig);
+        assertEq(usdc.balanceOf(vendor), 0);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.EXPIRED));
+    }
+
+    function test_T29_blocklistedPayee() public {
+        uint256 id = _ask(2 * uint64(ONE));
+        usdc.blocklist(vendor, true);
+        (bytes memory blk, bytes memory sig) = _approveMail(id);
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit PayoutFailed(id, vendor, 2 * ONE);
+        vault.approveByEmail(blk, sig);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.FAILED));
+        assertEq(usdc.balanceOf(address(vault)), 10 * ONE);
+    }
+
+    function test_relayerTipBounds() public {
+        vm.startPrank(owner);
+        vm.expectRevert(FalaVault.InvalidConfig.selector);
+        vault.setParams(1 hours, 50_001);
+        vault.setParams(2 hours, 0);
+        vm.stopPrank();
+        uint256 id = _ask(2 * uint64(ONE));
+        (bytes memory blk, bytes memory sig) = _approveMail(id);
+        vm.prank(relayer);
+        vault.approveByEmail(blk, sig);
+        assertEq(usdc.balanceOf(relayer), 0);
+    }
+
+    // ------------------------------------------------------------------ real Gmail fixture (T31) & fuzz (T32)
+
+    function test_T31_realGmailFixture() public {
+        if (!vm.exists("test/fixtures/gmail-real.json")) {
+            console.log("T31 skipped: add test/fixtures/gmail-real.json (see scripts/capture-fixture.ts)");
+            vm.skip(true);
+        }
+        string memory j = vm.readFile("test/fixtures/gmail-real.json");
+        bytes memory blk = vm.parseJsonBytes(j, ".block");
+        bytes memory sig = vm.parseJsonBytes(j, ".sig");
+        bytes memory n = vm.parseJsonBytes(j, ".n");
+        bytes memory e = vm.parseJsonBytes(j, ".e");
+        DkimHarness h = new DkimHarness();
+        uint256 g = gasleft();
+        (bool ok, DkimVerifier.DkimResult memory r) = h.run(blk, sig, n, e);
+        console.log("T33 verify gas (real Gmail fixture):", g - gasleft());
+        assertTrue(ok, "real Gmail signature must verify");
+        assertEq(r.domainHash, keccak256("gmail.com"));
+        assertEq(r.fromHash, keccak256(bytes(vm.parseJsonString(j, ".from"))));
+        assertEq(string(r.subject), vm.parseJsonString(j, ".subject"));
+    }
+
+    function testFuzz_T32_randomBlockNeverPays(bytes calldata blk, bytes calldata sig) public {
+        uint256 id = _ask(2 * uint64(ONE));
+        try vault.approveByEmail(blk, sig) {} catch {}
+        assertEq(usdc.balanceOf(vendor), 0);
+        assertEq(usdc.balanceOf(address(vault)), 10 * ONE);
+        assertEq(uint8(_status(id)), uint8(FalaVault.Status.PENDING));
     }
 }
