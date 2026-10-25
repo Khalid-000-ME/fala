@@ -31,8 +31,8 @@ export const gas = {
   maxPriorityFeePerGas: parseGwei(opt("PRIORITY_FEE_GWEI") ?? "1"),
 };
 
-export type Role = "worker" | "auditor" | "rogue" | "owner";
-const keyEnv: Record<Role, string> = { worker: "AGENT_PRIVATE_KEY", auditor: "AUDITOR_PRIVATE_KEY", rogue: "ROGUE_PRIVATE_KEY", owner: "OWNER_PRIVATE_KEY" };
+export type Role = "owner" | "agent" | "relayer";
+const keyEnv: Record<Role, string> = { owner: "OWNER_PRIVATE_KEY", agent: "AGENT_PRIVATE_KEY", relayer: "RELAYER_PRIVATE_KEY" };
 export const privateKey = (r: Role): Hex => {
   const v = need(keyEnv[r]).trim();
   return (v.startsWith("0x") ? v : `0x${v}`) as Hex;
@@ -41,13 +41,15 @@ export const privateKey = (r: Role): Hex => {
 export const model = () => opt("MODEL") ?? "openai/gpt-oss-120b";
 export const groqKey = () => opt("GROQ_API_KEY");
 
-export const addresses = () => ({
+/** Where the agent tells the email Worker "a payment needs approval". */
+export const notifyUrl = () => opt("NOTIFY_URL");
+export const notifyToken = () => opt("NOTIFY_TOKEN");
+
+export const vendors = () => ({
   VENDOR_A: need("VENDOR_A") as Address,
   VENDOR_B: need("VENDOR_B") as Address,
-  ATTACKER: need("ATTACKER_ADDRESS") as Address,
 });
 export const labelFor = (a: string) => {
-  const m = addresses();
-  const hit = Object.entries(m).find(([, v]) => v.toLowerCase() === a.toLowerCase());
+  const hit = Object.entries(vendors()).find(([, v]) => v.toLowerCase() === a.toLowerCase());
   return hit?.[0] ?? "UNKNOWN";
 };
