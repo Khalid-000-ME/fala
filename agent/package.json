@@ -4,9 +4,8 @@
   "type": "module",
   "scripts": {
     "mcp": "tsx src/mcp-server.ts",
-    "worker": "tsx src/worker.ts",
-    "auditor": "tsx src/auditor.ts",
-    "demo": "tsx src/redteam.ts",
+    "agent": "tsx src/agent.ts",
+    "e2e": "tsx src/tools/e2e.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
