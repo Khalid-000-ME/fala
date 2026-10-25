@@ -9,3 +9,8 @@ dist
 # planning docs, never committed
 FALA_PRD.md
 *PRD*.md
+
+# real emails never committed
+*.eml
+!**/fixtures/**/*.eml
+.env.secrets
