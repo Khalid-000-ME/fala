@@ -14,6 +14,7 @@ import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parseEventLogs } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { falaVaultAbi } from "./abi";
 import { chainClient, type ChainEnv } from "./chain";
 import { approvalEmail, receiptEmail } from "./mail";
@@ -49,7 +50,12 @@ const send = (raw: string, to: string) => smtp().sendMail({ envelope: { from: re
 const log = (m: string) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
 const labels = (() => {
-  try { return Object.fromEntries(Object.entries(JSON.parse(process.env.LABELS ?? "{}") as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])); } catch { return {}; }
+  const base: Record<string, string> = {};
+  if (process.env.VENDOR_A) base[process.env.VENDOR_A.toLowerCase()] = "Vendor A";
+  if (process.env.VENDOR_B) base[process.env.VENDOR_B.toLowerCase()] = "Vendor B";
+  const agentKey = process.env.AGENT_PRIVATE_KEY;
+  if (agentKey) base[privateKeyToAccount((agentKey.startsWith("0x") ? agentKey : `0x${agentKey}`) as `0x${string}`).address.toLowerCase()] = "Worker agent";
+  try { return { ...base, ...Object.fromEntries(Object.entries(JSON.parse(process.env.LABELS ?? "{}") as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])) }; } catch { return base; }
 })() as Record<string, string>;
 const label = (a: string) => labels[a.toLowerCase()] ?? `${a.slice(0, 6)}…${a.slice(-4)}`;
 
