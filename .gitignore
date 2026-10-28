@@ -15,3 +15,7 @@ FALA_PRD.md
 !**/fixtures/**/*.eml
 .env.secrets
 .secrets
+
+# real Gmail fixtures carry the sender/recipient addresses
+contracts/test/fixtures/gmail-real.json
+spike/
