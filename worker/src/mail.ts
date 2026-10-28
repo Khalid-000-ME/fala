@@ -17,7 +17,7 @@ export type ApprovalMail = {
   freezeSubject: string;
 };
 
-export type ReceiptKind = "paid" | "denied" | "frozen" | "expired" | "failed" | "refused";
+export type ReceiptKind = "paid" | "denied" | "frozen" | "expired" | "failed" | "refused" | "duplicate";
 export type ReceiptMail = {
   from: string;
   to: string;
@@ -28,6 +28,7 @@ export type ReceiptMail = {
   id?: string;
   explorerUrl?: string;
   detail?: string;
+  status?: string; // for "duplicate": the request's earlier outcome (APPROVED, DENIED, ...)
 };
 
 const INK = "#0a0a0a";
@@ -213,6 +214,22 @@ const RECEIPT: Record<ReceiptKind, { icon: string; color: string; subject: (r: R
     title: () => "Approved — but it couldn't be sent",
     lead: () => "The vault may be underfunded or the payee blocked. Your funds stay safely in the vault, and this request is now closed. Top up the vault and ask the agent to try again.",
   },
+  duplicate: {
+    icon: "ℹ", color: MUTE,
+    subject: (r) => `Already handled: request #${r.id}`,
+    title: () => "Already taken care of",
+    lead: (r) => {
+      const what = r.amount ? `the ${money(r.amount)} payment${r.payee ? ` to ${r.payee}` : ""}` : "this payment";
+      switch (r.status) {
+        case "APPROVED": return `Request #${r.id} was already approved — ${what} was sent earlier. There's no need to reply again.`;
+        case "DENIED": return `Request #${r.id} was already denied, so ${what} was not made. There's no need to reply again.`;
+        case "EXPIRED": return `Request #${r.id} expired before it was answered, so ${what} was not made.`;
+        case "CANCELLED": return `Request #${r.id} was cancelled, so ${what} was not made.`;
+        case "FAILED": return `Request #${r.id} was approved earlier, but ${what} couldn't be sent. The funds stayed in the vault.`;
+        default: return `Request #${r.id} has already been handled. There's no need to reply again.`;
+      }
+    },
+  },
   refused: {
     icon: "!", color: RED,
     subject: () => "We couldn't process that reply",
@@ -239,7 +256,7 @@ export function receiptEmail(r: ReceiptMail): string {
     text,
     html: layout({
       preheader: k.lead(r),
-      eyebrow: r.kind === "refused" || r.kind === "failed" ? "Heads up" : "Update",
+      eyebrow: r.kind === "refused" || r.kind === "failed" ? "Heads up" : r.kind === "duplicate" ? "No action needed" : "Update",
       title: `<span style="color:${k.color};">${k.icon}</span>&nbsp;${esc(k.title(r))}`,
       body,
       footer: "You're getting this receipt because you replied to a Fala approval request. Questions? Just ignore this email — nothing else is needed.",

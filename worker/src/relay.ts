@@ -64,6 +64,18 @@ export async function relayRaw(raw: Uint8Array, d: RelayDeps): Promise<RelayResu
     checked = await d.check(hb, sg);
   } catch (e) {
     const name = d.errorName(e);
+    if (name === "IntentNotPending") {
+      // a second tap / duplicate reply: say what already happened instead of sounding like an error
+      const id = /^(?:re: )?FALA (?:APPROVE|DENY) (\d+) /i.exec(p.subject)?.[1];
+      const info = id ? await d.intent(BigInt(id)).catch(() => undefined) : undefined;
+      if (id && info) {
+        return {
+          kind: "rejected", stage: "contract", error: name,
+          text: `Request #${id} was already ${info.status.toLowerCase()}; nothing more to do.`,
+          receipt: { kind: "duplicate", id, status: info.status, amount: info.amount, payee: d.label?.(info.payee) ?? info.payee },
+        };
+      }
+    }
     return {
       kind: "rejected", stage: "contract", error: name,
       text: `The vault refused this email (${name}): ${refusalText(name)}`,
