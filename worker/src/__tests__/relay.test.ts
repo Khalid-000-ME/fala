@@ -171,6 +171,16 @@ describe("receipt emails", () => {
     expect(subj("failed")).toMatch(/couldn't be sent/);
     expect(subj("refused")).toBe("We couldn't process that reply");
   });
+  it("answers a duplicate reply calmly instead of sounding like an error", async () => {
+    const d = deps({ check: vi.fn(async () => { throw new Error("IntentNotPending"); }) });
+    const r = await relayRaw(await eml("FALA APPROVE 42 7f3a9c1b"), d);
+    expect(r.kind === "rejected" && r.receipt).toMatchObject({ kind: "duplicate", id: "42", status: "APPROVED", amount: "2.00", payee: "DataCo" });
+    const raw = receiptEmail({ ...base, ...(r.kind === "rejected" ? r.receipt : { kind: "duplicate" as const }) });
+    expect(header(raw, "Subject")).toBe("Already handled: request #42");
+    expect(decode(raw)).toContain("was already approved");
+    expect(decode(raw)).toContain("There's no need to reply again");
+    expect(d.submit).not.toHaveBeenCalled();
+  });
   it("relay results carry a structured receipt", async () => {
     const d = deps();
     const r = await relayRaw(await eml("FALA APPROVE 42 7f3a9c1b"), d);
