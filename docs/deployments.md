@@ -2,6 +2,18 @@
 
 ## Arc testnet (chain 5042002)
 
+### Primary — trusts Google's real DKIM key
+
+| Item | Value |
+|---|---|
+| FalaVault | [`0xda18E4C2fD9e31946739f318324f4578DbD531fD`](https://explorer.testnet.arc.io/address/0xda18E4C2fD9e31946739f318324f4578DbD531fD) |
+| Deploy tx / block | [`0xfd088803…2e53`](https://explorer.testnet.arc.io/tx/0xfd0888030fc104e4328077a858ee74391369af6cc377aef1a785b42924e82e53) / 69462444 |
+| Approver | `fala.approver.1@gmail.com` |
+| DKIM key | `gmail.com` / `20260707` — **Google's real key** |
+| Policy | auto ≤ 0.20 USDC/tx, 1.00/day, hard cap 5.00, request TTL 3 days, relayer tip 0.02 |
+
+### Secondary — stand-in key (forge panel cases)
+
 | Item | Value |
 |---|---|
 | FalaVault | [`0x1F338BA8AB3e858e0c46a83a9959C06c437C5282`](https://explorer.testnet.arc.io/address/0x1F338BA8AB3e858e0c46a83a9959C06c437C5282) |
@@ -12,13 +24,13 @@
 | Agent | `0x5Cb015C768fbf14780ffce0079265227c4091EDF` |
 | Relayer | `0xa05EA1a9dA6301AD14E0501eC25ee6326D5fceF2` |
 | Approver (placeholder) | `fala.demo.approver@gmail.com` |
-| DKIM key | `gmail.com` / `falastandin` — **a stand-in key I control**, not Gmail's. See [spike.md](spike.md). |
+| DKIM key | `gmail.com` / `falastandin` — a stand-in key the builder controls, used for the refusal-panel cases. |
 
 Policy: auto ≤ 0.20 USDC per tx, 1.00 USDC per day, hard cap 5.00 USDC, request TTL 30 days (so the forge panel cases stay valid), relayer tip 0.02 USDC.
 
 ## Arc mainnet (chain 5042)
 
-Not deployed. Needs the real Gmail selector/key (see [spike.md](spike.md)) and mainnet USDC.
+Not deployed yet (needs mainnet USDC). Same constructor args as the primary testnet vault: Google's `gmail.com`/`20260707` key — re-check the selector in DNS before deploying, as Gmail rotates keys.
 
 ## Retired testnet vaults
 
