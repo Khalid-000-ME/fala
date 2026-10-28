@@ -17,9 +17,9 @@ crons = ["* * * * *"]
 [vars]
 NETWORK = "testnet"
 RPC_URL = "https://rpc.testnet.arc.io"
-VAULT_ADDRESS = "0x1F338BA8AB3e858e0c46a83a9959C06c437C5282"
-VAULT_DEPLOY_BLOCK = "69051544"
-APPROVER_EMAIL = "REPLACE_ME@gmail.com"
+VAULT_ADDRESS = "0xda18E4C2fD9e31946739f318324f4578DbD531fD"
+VAULT_DEPLOY_BLOCK = "69462444"
+APPROVER_EMAIL = "fala.approver.1@gmail.com"
 INBOUND_ADDRESS = "approve@REPLACE_ME.example"
 SEND_FROM = "fala@REPLACE_ME.example"
 MAX_FEE_GWEI = "25"
