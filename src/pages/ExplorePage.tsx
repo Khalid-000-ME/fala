@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import { useAccount } from "wagmi";
-import { DEMO } from "./config/chain";
-import { useVaultLogs, useVaultState } from "./hooks/useVaultData";
-import { Footer, Header, Toasts, WrongNetwork } from "./components/Chrome";
-import { Hero, HowItWorks, Overview } from "./components/Overview";
-import { Agents } from "./components/Agents";
-import { Activity, Requests } from "./components/Requests";
-import { Approve } from "./components/Approve";
-import { Forge } from "./components/Forge";
+import { DEMO } from "../config/chain";
+import { useVaultLogs, useVaultState } from "../hooks/useVaultData";
+import { Footer, Header, Toasts, WrongNetwork } from "../components/Chrome";
+import { Hero, HowItWorks, Overview } from "../components/Overview";
+import { Agents } from "../components/Agents";
+import { Activity, Requests } from "../components/Requests";
+import { Approve } from "../components/Approve";
+import { Forge } from "../components/Forge";
 
-export default function App() {
+export default function ExplorePage() {
   const { state } = useVaultState();
   const logs = useVaultLogs();
   const { address } = useAccount();
