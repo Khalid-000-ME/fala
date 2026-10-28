@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { dkimSign } from "mailauth";
 import { keyFromTxt } from "../dkim";
 import { relayRaw, type RelayDeps } from "../relay";
-import { approvalEmail } from "../mail";
+import { approvalEmail, approvalSubject, friendlyExpiry, receiptEmail } from "../mail";
 
 const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
 const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
@@ -93,23 +93,89 @@ describe("relayRaw", () => {
   });
 });
 
-describe("approval email", () => {
-  const raw = approvalEmail({
-    from: "fala@fala.example", to: APPROVER, inbound: "approve@fala.example", id: "42", amount: "2.00", payee: "DataCo",
-    memo: "annual API plan", expiresAt: 1_800_000_000, approveSubject: "FALA APPROVE 42 7f3a9c1b", denySubject: "FALA DENY 42 7f3a9c1b", freezeSubject: "FALA FREEZE 0 0",
-  });
-  const decoded = (() => {
-    // decode the base64 parts to inspect the content
-    return [...raw.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g)].map((m) => Buffer.from(m[1].replace(/\r\n/g, ""), "base64").toString("utf8")).join("\n");
-  })();
+const decode = (raw: string) =>
+  [...raw.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g)].map((m) => Buffer.from(m[1].replace(/\r\n/g, ""), "base64").toString("utf8")).join("\n");
+const header = (raw: string, name: string) => {
+  const v = raw.match(new RegExp(`^${name}: (.*)$`, "m"))?.[1] ?? "";
+  const enc = v.match(/^=\?UTF-8\?B\?(.+)\?=$/);
+  return enc ? Buffer.from(enc[1], "base64").toString("utf8") : v;
+};
+const htmlPart = (raw: string) =>
+  [...raw.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g)].map((m) => Buffer.from(m[1].replace(/\r\n/g, ""), "base64").toString("utf8")).at(-1)!;
 
-  it("has three mailto buttons with url-encoded subjects", () => {
-    expect(decoded).toContain("mailto:approve@fala.example?subject=FALA%20APPROVE%2042%207f3a9c1b");
-    expect(decoded).toContain("mailto:approve@fala.example?subject=FALA%20DENY%2042%207f3a9c1b");
-    expect(decoded).toContain("mailto:approve@fala.example?subject=FALA%20FREEZE%200%200");
+describe("approval email", () => {
+  const mail = {
+    from: "fala.relay@gmail.com", to: APPROVER, inbound: "fala.relay@gmail.com", id: "42", amount: "2.00", payee: "DataCo",
+    payeeAddress: "0xFA1aA7EF6530feeCE52b13C4B413Cf191091451c", memo: "annual API plan", agent: "Worker agent", vault: "Procurement vault",
+    expiresAt: Math.floor(Date.now() / 1000) + 3600, approveSubject: "FALA APPROVE 42 7f3a9c1b", denySubject: "FALA DENY 42 7f3a9c1b", freezeSubject: "FALA FREEZE 0 0",
+  };
+  const raw = approvalEmail(mail);
+  const body = decode(raw);
+
+  it("has a friendly, specific subject and sender name", () => {
+    expect(header(raw, "Subject")).toBe("Approve 2.00 USDC to DataCo? · Request #42");
+    expect(approvalSubject(mail)).toBe("Approve 2.00 USDC to DataCo? · Request #42");
+    expect(header(raw, "From")).toBe("Fala Approvals <fala.relay@gmail.com>");
   });
-  it("carries a plain-text fallback and CRLF-separated headers", () => {
-    expect(decoded).toContain("FALA APPROVE 42 7f3a9c1b");
-    expect(raw.startsWith("From: Fala <fala@fala.example>\r\nTo: approver@gmail.com\r\nSubject: [Fala] Approve 2.00 USDC to DataCo? (#42)")).toBe(true);
+
+  it("has Approve and Deny buttons with url-encoded subjects and a pre-written friendly reply", () => {
+    expect(body).toContain("mailto:fala.relay@gmail.com?subject=FALA%20APPROVE%2042%207f3a9c1b&amp;body=");
+    expect(body).toContain("mailto:fala.relay@gmail.com?subject=FALA%20DENY%2042%207f3a9c1b&amp;body=");
+    expect(body).toContain("mailto:fala.relay@gmail.com?subject=FALA%20FREEZE%200%200&amp;body=");
+    expect(decodeURIComponent(body.match(/APPROVE%2042%207f3a9c1b&amp;body=([^"]+)"/)![1])).toContain("Yes, please go ahead and pay 2.00 USDC to DataCo.");
+  });
+
+  it("explains the code in plain words and shows the payment details", () => {
+    expect(body).toContain("Why does the reply have a code in its subject?");
+    expect(body).toContain("Nothing moves until you say yes");
+    expect(body).toContain("annual API plan");
+    expect(body).toContain("Procurement vault");
+    expect(body).toContain("Worker agent");
+  });
+
+  it("has a readable plain-text part with the exact subjects", () => {
+    expect(body).toContain("TO APPROVE");
+    expect(body).toContain("  FALA APPROVE 42 7f3a9c1b");
+    expect(body).toContain("Why the code?");
+  });
+
+  it("escapes anything the agent controls", () => {
+    const evil = htmlPart(approvalEmail({ ...mail, memo: '<script>alert(1)</script> "x"', payee: "<b>x</b>" }));
+    expect(evil).not.toContain("<script>");
+    expect(evil).toContain("&lt;script&gt;");
+  });
+
+  it("formats expiry in friendly terms", () => {
+    const now = 1_800_000_000;
+    expect(friendlyExpiry(now + 59 * 60, now)).toMatch(/^in 59 minutes · /);
+    expect(friendlyExpiry(now + 3 * 3600, now)).toMatch(/^in 3 hours · /);
+    expect(friendlyExpiry(now + 3 * 86400, now)).toMatch(/^in 3 days · /);
+    expect(friendlyExpiry(now - 5, now)).toMatch(/^expired/);
+  });
+});
+
+describe("receipt emails", () => {
+  const base = { from: "fala.relay@gmail.com", to: APPROVER };
+  it("confirms a payment with a transaction link", () => {
+    const raw = receiptEmail({ ...base, kind: "paid", amount: "1.20", payee: "DataCo", memo: "credits", id: "3", explorerUrl: "https://explorer.example/tx/0xabc" });
+    expect(header(raw, "Subject")).toBe("Payment sent: 1.20 USDC to DataCo ✓");
+    const body = decode(raw);
+    expect(body).toContain("https://explorer.example/tx/0xabc");
+    expect(body).toContain("Arc verified Google's signature");
+  });
+  it("has a clear subject for every outcome", () => {
+    const subj = (kind: Parameters<typeof receiptEmail>[0]["kind"]) => header(receiptEmail({ ...base, kind, amount: "1.00", payee: "A" }), "Subject");
+    expect(subj("denied")).toBe("You denied the 1.00 USDC payment to A");
+    expect(subj("frozen")).toMatch(/^Vault frozen/);
+    expect(subj("expired")).toMatch(/expired/);
+    expect(subj("failed")).toMatch(/couldn't be sent/);
+    expect(subj("refused")).toBe("We couldn't process that reply");
+  });
+  it("relay results carry a structured receipt", async () => {
+    const d = deps();
+    const r = await relayRaw(await eml("FALA APPROVE 42 7f3a9c1b"), d);
+    expect(r.kind === "done" && r.receipt).toMatchObject({ kind: "paid", amount: "2.00", payee: "DataCo", id: "42" });
+    const refused = await relayRaw(await eml("FALA APPROVE 42 7f3a9c1b"), deps({ check: vi.fn(async () => { throw new Error("CodeMismatch"); }) }));
+    expect(refused.kind === "rejected" && refused.receipt.kind).toBe("refused");
   });
 });
