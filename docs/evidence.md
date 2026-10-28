@@ -1,8 +1,27 @@
 # Evidence (Arc testnet)
 
+## ✅ Real Gmail, Google's own key
+
+A real email sent from `fala.approver.1@gmail.com` (DKIM `d=gmail.com`, selector `20260707`) released USDC through the vault. No stand-in key involved.
+
+Vault: [`0xda18E4C2fD9e31946739f318324f4578DbD531fD`](https://explorer.testnet.arc.io/address/0xda18E4C2fD9e31946739f318324f4578DbD531fD) (trusts only Google's `gmail.com`/`20260707` key).
+
+| Step | What it proves | Tx |
+|---|---|---|
+| Deploy vault with Google's real key | constructor registers the approver hash + Gmail's RSA modulus | [`0xfd088803…`](https://explorer.testnet.arc.io/tx/0xfd0888030fc104e4328077a858ee74391369af6cc377aef1a785b42924e82e53) |
+| Agent `request` 2.00 → intent #1 | above the allowance → `PENDING`, code `19554fa6` | [`0xa5953a54…`](https://explorer.testnet.arc.io/tx/0xa5953a54be043e23bf8611f2223b7ef4d30842be83dfcfc490350cfd6714f864) |
+| `approveByEmail` with the real Gmail reply | Google's RSA signature verified onchain; 2.00 USDC paid; intent `APPROVED` | [`0x8fbe3ea6…`](https://explorer.testnet.arc.io/tx/0x8fbe3ea6ed2ebd2e576711ac2efa8188b81d3fe588d86d3b06d2bc889e1f3adb) |
+
+Before submitting, the same email was dry-run with `checkEmail` (an `eth_call`): accepted. The same email with one byte flipped: `BadSignature`.
+Gas for the real approval: **533,230 ≈ 0.0112 USDC** at the effective 21 gwei (Gmail signs more headers than my stand-in, so the signed block is 652 bytes).
+Verifying Gmail's signature alone costs ~368k gas in Foundry.
+
+> Privacy note: this email's `To:` header (the author's main address) is now in the transaction's calldata. Real approvals should be sent to `approve@<your-domain>`.
+
+## Stand-in key runs (full flow, plus the refusal cases)
+
 Every row is a real transaction on the vault in [deployments.md](deployments.md), run with a **stand-in Gmail key** (a throwaway
-RSA key registered as `gmail.com`/`falastandin`). The contract path is identical to the real one; what is not yet proven is that
-*Gmail's own* key verifies — that needs the real `.eml` (see [spike.md](spike.md)).
+RSA key registered as `gmail.com`/`falastandin`) on the earlier vault. The contract path is identical; the section above proves it with Gmail's own key.
 
 | Step | What it proves | Tx |
 |---|---|---|
@@ -24,7 +43,8 @@ Also run live by the Groq agent (`npm run agent`): it auto-paid 0.10, requested 
 
 | Call | Gas | Cost at the effective 21 gwei |
 |---|---|---|
-| `approveByEmail` APPROVE | 449,978 – 451,896 | ≈ **0.0095 USDC** |
+| `approveByEmail` APPROVE (real Gmail) | 533,230 | ≈ **0.0112 USDC** |
+| `approveByEmail` APPROVE (stand-in, smaller block) | 449,978 – 451,896 | ≈ 0.0095 USDC |
 | `approveByEmail` DENY | 393,351 | ≈ 0.0083 USDC |
 | `approveByEmail` FREEZE | 387,766 | ≈ 0.0081 USDC |
 | RSA-2048 verify alone (Foundry, synthetic) | ~290,000 | — |
