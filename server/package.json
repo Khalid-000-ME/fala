@@ -1,0 +1,30 @@
+{
+  "name": "fala-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "artifact": "node scripts/gen-artifact.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@libsql/client": "^0.18.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@privy-io/server-auth": "^1.32.5",
+    "dotenv": "^18.0.9",
+    "hono": "^4.13.14",
+    "imapflow": "^2.9.1",
+    "nodemailer": "^10.2.1",
+    "viem": "^2.57.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/nodemailer": "^8.0.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  }
+}
