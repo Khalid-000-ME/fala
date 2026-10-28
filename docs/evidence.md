@@ -16,6 +16,17 @@ Before submitting, the same email was dry-run with `checkEmail` (an `eth_call`):
 Gas for the real approval: **533,230 ≈ 0.0112 USDC** at the effective 21 gwei (Gmail signs more headers than my stand-in, so the signed block is 652 bytes).
 Verifying Gmail's signature alone costs ~368k gas in Foundry.
 
+### Phone round trip (no downloaded files)
+
+The approval email was sent by the free mailbox relay; the reply was tapped **Approve** → **Send** on a phone from `fala.approver.1@gmail.com`; the relay read it from a Gmail inbox, verified Google's signature, and submitted it.
+
+| Step | What it proves | Tx |
+|---|---|---|
+| Agent `request` 1.20 → intent #2 | pending | [`0x55c4aae5…`](https://explorer.testnet.arc.io/tx/0x55c4aae5c398248ba1c5a8713d89248f1eac9d683b1ed037316c60c9154f4eab) |
+| Phone reply for #2 with the vault underfunded (0.98 USDC) | `EmailApproved` then `PayoutFailed`: request closed `FAILED`, funds untouched | relay log 12:26 |
+| Agent `request` 1.20 → intent #3 | pending | [`0x6685865b…`](https://explorer.testnet.arc.io/tx/0x6685865b56290329edb1b9cfed9a6e2316f5a618c2b8dc6dc9a31b0e019d0262) |
+| Phone reply for #3 → `approveByEmail` | Google's signature verified; 1.20 USDC paid; "Paid ✅" email sent back | [`0xc9af3454…`](https://explorer.testnet.arc.io/tx/0xc9af3454a2f41105e168529876c5fe036b3b5936c8e0fe20896d9e2a43f68100) |
+
 > Privacy note: this email's `To:` header (the author's main address) is now in the transaction's calldata. Real approvals should be sent to `approve@<your-domain>`.
 
 ## Stand-in key runs (full flow, plus the refusal cases)
