@@ -6,7 +6,7 @@ import { Empty, Section } from "./ui";
 import { useTx } from "../hooks/useTx";
 import { useNow } from "../hooks/useVaultData";
 
-const INBOUND = import.meta.env.VITE_INBOUND_ADDRESS as string | undefined;
+const ENV_INBOUND = import.meta.env.VITE_INBOUND_ADDRESS as string | undefined;
 
 const CHIP: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "Pending", cls: "bg-[#fff4de] text-warn" },
@@ -18,14 +18,15 @@ const CHIP: Record<string, { label: string; cls: string }> = {
 };
 
 const subjectOf = (verb: "APPROVE" | "DENY", i: IntentRow) => `FALA ${verb} ${i.id} ${i.code}`;
-const mailto = (subject: string) => `mailto:${INBOUND}?subject=${encodeURIComponent(subject)}`;
+const mailto = (to: string, subject: string) => `mailto:${to}?subject=${encodeURIComponent(subject)}`;
 
-export function Requests({ intents, ttl, owner }: { intents: IntentRow[]; ttl: number; owner: boolean }) {
+export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: IntentRow[]; ttl: number; owner: boolean; onCancel?: (id: bigint) => void; inbound?: string }) {
   const now = useNow();
   const { vaultWrite, toast } = useTx();
   const live = (i: IntentRow) => i.status === "PENDING" && i.expiresAt > now;
   const waiting = intents.filter(live);
   void ttl;
+  const INBOUND = inbound ?? ENV_INBOUND;
   const copy = (s: string) => navigator.clipboard?.writeText(s).then(() => toast("Subject copied", "ok"));
 
   return (
@@ -49,13 +50,13 @@ export function Requests({ intents, ttl, owner }: { intents: IntentRow[]; ttl: n
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {INBOUND ? (
                 <>
-                  <a className="btn btn-sm" href={mailto(subjectOf("APPROVE", i))}>✅ Approve</a>
-                  <a className="btn-ghost btn btn-sm bg-white" href={mailto(subjectOf("DENY", i))}>❌ Deny</a>
+                  <a className="btn btn-sm" href={mailto(INBOUND!, subjectOf("APPROVE", i))}>✅ Approve</a>
+                  <a className="btn-ghost btn btn-sm bg-white" href={mailto(INBOUND!, subjectOf("DENY", i))}>❌ Deny</a>
                 </>
               ) : (
                 <span className="cap">Check your inbox for the Approve / Deny buttons.</span>
               )}
-              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => vaultWrite("cancel", [i.id], "Cancel request")}>[ cancel · owner ]</button>
+              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => (onCancel ? onCancel(i.id) : vaultWrite("cancel", [i.id], "Cancel request"))}>[ cancel · owner ]</button>
             </div>
           </div>
         ))}
