@@ -11,9 +11,12 @@
     "test:contracts": "cd contracts && forge test -vv"
   },
   "dependencies": {
+    "@privy-io/react-auth": "^3.51.0",
+    "@stripe/stripe-js": "^10.2.0",
     "@tanstack/react-query": "^5.104.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.5",
     "viem": "^2.57.11",
     "wagmi": "^2.19.5"
   },
