@@ -72,7 +72,7 @@ Plain-language text for each lives in `src/lib/refusals.ts`.
 
 ## Why Arc
 
-RSA-2048 verification runs on Arc's modexp precompile: an approval is **≈ 450k gas ≈ 0.0095 USDC** (measured on testnet, see
+RSA-2048 verification runs on Arc's modexp precompile: an approval is **≈ 450–530k gas ≈ 0.01 USDC** (measured on testnet with real Gmail mail, see
 [docs/evidence.md](docs/evidence.md)). The relayer is tipped in the same asset it pays gas in (USDC), and sub-second finality
 lets the "Paid ✅" email go out right after the receipt.
 
@@ -84,10 +84,10 @@ signature onchain because Arc makes it cheap) to the most universal signer there
 
 ## Status — what is proven, what is not
 
-- ✅ Contracts: 41 tests pass (T1–T33 incl. fuzz), refusal cases for every named error.
-- ✅ Arc testnet: full flow with a **stand-in Gmail key** — see [docs/evidence.md](docs/evidence.md).
+- ✅ Contracts: 42 tests pass (T1–T33 incl. fuzz and the real Gmail fixture), refusal cases for every named error.
+- ✅ **Real Gmail on Arc testnet:** a reply from a real Gmail account was verified against Google's own DKIM key and released 2.00 USDC (533k gas ≈ 0.011 USDC) — [docs/evidence.md](docs/evidence.md).
+- ✅ Full flow + refusal cases also run with a stand-in key on a second testnet vault.
 - ✅ DKIM canonicalizer cross-checked against the independent `mailauth` implementation.
-- ⏳ **Real Gmail signature on Arc** — needs one real `.eml` ([docs/spike.md](docs/spike.md)). Until then the testnet vault trusts a key I control, not Google's.
 - ⏳ Cloudflare Worker is written and unit-tested but not yet deployed (needs a domain + Email Routing).
 - ⏳ Mainnet deployment.
 - ⏳ Arc Studio: contracts and app were built locally with Foundry, not through Studio runs.
