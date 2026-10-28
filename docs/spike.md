@@ -1,6 +1,6 @@
 # Day-1 spike: does a real Gmail signature verify on Arc?
 
-**Status:** everything downstream is built and verified with a stand-in key. The one open item is a *real* Gmail-signed email.
+**Status: GO ✅.** A real Gmail-signed email verifies locally, in Foundry (~368k gas) and on Arc testnet, and a real reply released USDC — see [evidence.md](evidence.md).
 
 ## What is already proven
 - The canonicalizer (`src/lib/dkim.ts`) produces exactly the bytes an independent DKIM implementation (`mailauth`) signs/verifies.
