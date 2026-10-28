@@ -88,7 +88,7 @@ export function mime(o: { from: string; fromName?: string; to: string; subject: 
 }
 
 /** Shared card layout (600px, table-based, inline styles). */
-function layout(o: { preheader: string; eyebrow: string; title: string; body: string; footer: string }): string {
+export function layout(o: { preheader: string; eyebrow: string; title: string; body: string; footer: string }): string {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>
 <body style="margin:0;padding:0;background:#f4f4f5;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f4f4f5;">${esc(o.preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
@@ -104,10 +104,10 @@ function layout(o: { preheader: string; eyebrow: string; title: string; body: st
 </table></td></tr></table></body></html>`;
 }
 
-const row = (k: string, v: string) =>
+export const row = (k: string, v: string) =>
   `<tr><td style="padding:9px 0;border-top:1px solid ${LINE};font:13px ${FONT};color:${MUTE};width:96px;vertical-align:top;">${k}</td><td style="padding:9px 0;border-top:1px solid ${LINE};font:14.5px/1.45 ${FONT};color:${INK};">${v}</td></tr>`;
 
-const button = (href: string, label: string, bg: string, fg = "#ffffff", border = bg) =>
+export const button = (href: string, label: string, bg: string, fg = "#ffffff", border = bg) =>
   `<td style="padding:0 10px 10px 0;"><a href="${esc(href)}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:${bg};border:1px solid ${border};color:${fg};font:600 15px ${FONT};text-decoration:none;">${label}</a></td>`;
 
 export function approvalSubject(m: Pick<ApprovalMail, "amount" | "payee" | "id">) {
@@ -262,4 +262,20 @@ export function receiptEmail(r: ReceiptMail): string {
       footer: "You're getting this receipt because you replied to a Fala approval request. Questions? Just ignore this email — nothing else is needed.",
     }),
   });
+}
+
+export type LowBalanceMail = { from: string; to: string; vault: string; balance: string; minimum: string; shortfall: string; vaultAddress: string; dashboardUrl: string };
+
+export function lowBalanceEmail(m: LowBalanceMail): string {
+  const body = `
+    <p style="margin:16px 0 22px 0;font:15px/1.65 ${FONT};color:#3a3a3a;">Your vault <b>${esc(m.vault)}</b> has dropped below the minimum balance you set, so your agents may soon be unable to pay. Top it up to keep them running.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;">
+      ${row("Balance", `${esc(m.balance)} USDC`)}${row("Minimum", `${esc(m.minimum)} USDC`)}${row("Needed", `<b>${esc(m.shortfall)} USDC</b> to get back to your minimum`)}
+      ${row("Vault", `<span style="font:12px ${MONO};">${esc(m.vaultAddress)}</span>`)}
+    </table>
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr>${button(m.dashboardUrl, "Top up in Fala", INK)}</tr></table>`;
+  const text = [`Your vault "${m.vault}" is below its minimum balance.`, "", `Balance: ${m.balance} USDC`, `Minimum: ${m.minimum} USDC`, `Needed:  ${m.shortfall} USDC`, "", `Top up: ${m.dashboardUrl}`].join("\n");
+  return mime({ from: m.from, fromName: "Fala", to: m.to, subject: `Top up needed: ${m.vault} is below its minimum`, text,
+    html: layout({ preheader: `${m.vault} has ${m.balance} USDC, below your ${m.minimum} USDC minimum.`, eyebrow: "Heads up", title: "Your vault needs funds", body,
+      footer: "You're getting this because you set a minimum balance for this vault. You'll hear about it at most once a day. Change the minimum in the vault's settings." }) });
 }
