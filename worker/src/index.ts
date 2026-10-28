@@ -37,7 +37,7 @@ async function sendApproval(env: Env, id: bigint): Promise<"sent" | "not-pending
   const [a, d, f] = await Promise.all([c.subject(id, 1), c.subject(id, 2), c.subject(id, 3)]);
   await send(env, approvalEmail({
     from: env.SEND_FROM, to: env.APPROVER_EMAIL, inbound: env.INBOUND_ADDRESS, id: i.id, amount: i.amount,
-    payee: labeler(env)(i.payee), memo: i.memo, expiresAt: i.expiresAt, approveSubject: a, denySubject: d, freezeSubject: f,
+    payee: labeler(env)(i.payee), payeeAddress: i.payee, agent: labeler(env)(i.agent), memo: i.memo, expiresAt: i.expiresAt, approveSubject: a, denySubject: d, freezeSubject: f,
   }));
   await env.STATE?.put(`notified:${id}`, "1", { expirationTtl: 60 * 60 * 24 * 7 });
   return "sent";
@@ -68,8 +68,7 @@ export default {
       console.log(`ignored inbound email: ${res.why}`);
       return;
     }
-    const subject = res.kind === "done" ? "[Fala] Done" : "[Fala] Couldn't approve that";
-    await send(env, receiptEmail({ from: env.SEND_FROM, to: env.APPROVER_EMAIL, subject, body: res.text }));
+    await send(env, receiptEmail({ from: env.SEND_FROM, to: env.APPROVER_EMAIL, ...res.receipt }));
   },
 
   /** Backup poll: email any intent whose /notify call was missed. */

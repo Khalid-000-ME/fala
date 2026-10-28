@@ -77,8 +77,8 @@ async function notifyPending() {
       if (i.status !== "PENDING") continue;
       const [a, d, f] = await Promise.all([c.subject(l.args.id, 1), c.subject(l.args.id, 2), c.subject(l.args.id, 3)]);
       await send(approvalEmail({
-        from: relayUser(), to: approver(), inbound: relayUser(), id, amount: i.amount, payee: label(i.payee), memo: i.memo,
-        expiresAt: i.expiresAt, approveSubject: a, denySubject: d, freezeSubject: f,
+        from: relayUser(), to: approver(), inbound: relayUser(), id, amount: i.amount, payee: label(i.payee), payeeAddress: i.payee,
+        agent: label(i.agent), memo: i.memo, expiresAt: i.expiresAt, approveSubject: a, denySubject: d, freezeSubject: f,
       }), approver());
       log(`approval email sent for request #${id} (${i.amount} USDC)`);
     }
@@ -94,7 +94,7 @@ async function handle(raw: Uint8Array, dry = false) {
   if (res.kind === "ignored") return log(`ignored: ${res.why}`);
   log(res.text.split("\n")[0]);
   if (dry) return;
-  await send(receiptEmail({ from: relayUser(), to: approver(), subject: res.kind === "done" ? "[Fala] Done" : "[Fala] Couldn't approve that", body: res.text }), approver());
+  await send(receiptEmail({ from: relayUser(), to: approver(), ...res.receipt }), approver());
 }
 
 /** Read unseen mail from the approver over IMAP and relay each one onchain. */
