@@ -120,15 +120,20 @@ export type ChainLogs = {
 };
 
 /** Reads ONLY vault events (never USDC Transfer logs), by address in 9,999-block windows, decoded locally, then polls. */
-export function useVaultLogs(): ChainLogs {
+export function useVaultLogs(target?: { address: `0x${string}`; deployBlock: bigint }): ChainLogs {
+  const vaultAddr = target?.address ?? VAULT;
+  const fromBlock = target?.deployBlock ?? VAULT_DEPLOY_BLOCK;
   const client = usePublicClient();
   const [logs, setLogs] = useState<{ raw: RawLog[]; ts: Map<bigint, number> }>({ raw: [], ts: new Map() });
-  const [loading, setLoading] = useState(!DEMO);
+  const demo = DEMO && !target;
+  const [loading, setLoading] = useState(!demo);
   const cursor = useRef<bigint | null>(null);
   const tsCache = useRef(new Map<bigint, number>());
 
   useEffect(() => {
-    if (DEMO || !client) return;
+    if (demo || !client || !vaultAddr) return;
+    cursor.current = null;
+    setLogs({ raw: [], ts: new Map() });
     let stop = false;
     const stamp = async (n: bigint) => {
       if (tsCache.current.has(n)) return;
@@ -138,12 +143,12 @@ export function useVaultLogs(): ChainLogs {
     const sync = async () => {
       try {
         const tip = await client.getBlockNumber();
-        let from = cursor.current === null ? VAULT_DEPLOY_BLOCK : cursor.current + 1n;
+        let from = cursor.current === null ? fromBlock : cursor.current + 1n;
         const fresh: RawLog[] = [];
         while (from <= tip && !stop) {
           const to = from + WINDOW - 1n < tip ? from + WINDOW - 1n : tip;
           // Arc's RPC rejects multi-event topic filters, so filter by address only and decode locally.
-          const raw = await client.getLogs({ address: VAULT!, fromBlock: from, toBlock: to });
+          const raw = await client.getLogs({ address: vaultAddr!, fromBlock: from, toBlock: to });
           const decoded = parseEventLogs({ abi: falaVaultAbi, logs: raw }) as unknown as RawLog[];
           await Promise.all([...new Set(decoded.map((l) => l.blockNumber))].map(stamp));
           fresh.push(...decoded);
@@ -164,9 +169,9 @@ export function useVaultLogs(): ChainLogs {
       stop = true;
       clearInterval(t);
     };
-  }, [client]);
+  }, [client, vaultAddr, fromBlock, demo]);
 
-  return DEMO ? { events: demoEvents, intents: demoIntents, keys: demoKeys, payees: { [demoEvents[1].payee!]: true, [demoEvents[4].payee!]: false }, approvals: {}, loading: false } : derive(logs.raw, logs.ts, loading);
+  return demo ? { events: demoEvents, intents: demoIntents, keys: demoKeys, payees: { [demoEvents[1].payee!]: true, [demoEvents[4].payee!]: false }, approvals: {}, loading: false } : derive(logs.raw, logs.ts, loading);
 }
 
 function derive(raw: RawLog[], ts: Map<bigint, number>, loading: boolean): ChainLogs {
