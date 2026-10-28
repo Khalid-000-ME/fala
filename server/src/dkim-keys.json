@@ -1,0 +1,8 @@
+{
+  "gmail.com": {
+    "selector": "20260707",
+    "note": "Google's public DKIM key. Gmail rotates selectors: re-check `dig TXT <selector>._domainkey.gmail.com` before each deploy.",
+    "n": "0xd3ad46f692cf090b988a6ff2fbed02080e94f3b1f337ad2cf112ac85a584c930119e8daa83789c1ee96dd89b14becf8182f5ec99fd70d88e5358fb5f47e7d9ce387a7fb319e0295015d79d8b7c493308a413688337b0192df2c0b14106f9af33c3c7eb1e2d2c4f69d02d5ff5b39ce0e8e17dfc8093abd463ec8752abdcbe82b45c3f268b15ca338a9fcb1f9c4c9434b5b5984ba2327cd0f8e63aece3afa38c332b90e4bba260cf429c28d5e65bc1e15f6b3392a3498ff1a1b4f147d63d80bcc764b31ba09133e0695e3968c16e94fd8c9ffd090a08c845401817c0d41a6947ffb758d0158c9456c2bd51c6f3a86ddbce9087cdc7abb78cfd4199b1fe33141f61",
+    "e": "0x010001"
+  }
+}
