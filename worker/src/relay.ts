@@ -1,5 +1,6 @@
 import { bytesToHex, fetchDkimKey, parseEmail, verifyBlock, type DkimKeyMaterial } from "./dkim";
 import { refusalText } from "./refusals";
+import type { ReceiptMail } from "./mail";
 
 export type Outcome = { verb: "APPROVE" | "DENY" | "FREEZE" | "EXPIRED"; paid?: boolean; txHash: string; explorerUrl: string; gasUsed: bigint };
 export type IntentInfo = { id: string; payee: string; amount: string; memo: string; status: string };
@@ -15,10 +16,12 @@ export type RelayDeps = {
   label?: (payee: string) => string;
 };
 
+export type Receipt = Omit<ReceiptMail, "from" | "to">;
+
 export type RelayResult =
   | { kind: "ignored"; why: string }
-  | { kind: "rejected"; stage: "dkim" | "contract"; error?: string; text: string }
-  | { kind: "done"; outcome: Outcome; text: string };
+  | { kind: "rejected"; stage: "dkim" | "contract"; error?: string; text: string; receipt: Receipt }
+  | { kind: "done"; outcome: Outcome; text: string; receipt: Receipt };
 
 export const MAX_RAW_BYTES = 256 * 1024;
 
@@ -40,10 +43,18 @@ export async function relayRaw(raw: Uint8Array, d: RelayDeps): Promise<RelayResu
   try {
     const key = await (d.getKey ?? fetchDkimKey)(p.d, p.s);
     if (!(await verifyBlock(p.headerBlock, p.sig, key.spki))) {
-      return { kind: "rejected", stage: "dkim", text: "I couldn't verify Google's signature on this email, so nothing was sent onchain." };
+      return {
+        kind: "rejected", stage: "dkim",
+        text: "I couldn't verify Google's signature on this email, so nothing was sent onchain.",
+        receipt: { kind: "refused", detail: "We couldn't verify Google's signature on that email, so nothing was sent and no money moved. Please tap Approve in the original email and press Send without editing anything." },
+      };
     }
   } catch (e) {
-    return { kind: "rejected", stage: "dkim", text: `I couldn't check the DKIM key (${(e as Error).message}); nothing was sent onchain.` };
+    return {
+      kind: "rejected", stage: "dkim",
+      text: `I couldn't check the DKIM key (${(e as Error).message}); nothing was sent onchain.`,
+      receipt: { kind: "refused", detail: "We couldn't look up Google's signing key just now, so nothing was sent. Please try again in a minute." },
+    };
   }
 
   const hb = bytesToHex(p.headerBlock);
@@ -53,17 +64,34 @@ export async function relayRaw(raw: Uint8Array, d: RelayDeps): Promise<RelayResu
     checked = await d.check(hb, sg);
   } catch (e) {
     const name = d.errorName(e);
-    return { kind: "rejected", stage: "contract", error: name, text: `The vault refused this email (${name}): ${refusalText(name)}` };
+    return {
+      kind: "rejected", stage: "contract", error: name,
+      text: `The vault refused this email (${name}): ${refusalText(name)}`,
+      receipt: { kind: "refused", detail: `${refusalText(name)} Nothing was sent and no money moved.` },
+    };
   }
 
   const outcome = await d.submit(hb, sg);
   const info = checked.verb === 3 ? undefined : await d.intent(checked.id);
   const who = info ? (d.label?.(info.payee) ?? info.payee) : "";
+  const base = { amount: info?.amount, payee: who || undefined, memo: info?.memo, id: String(checked.id), explorerUrl: outcome.explorerUrl };
   let text: string;
-  if (outcome.verb === "FREEZE") text = `Vault frozen 🧊 — agents can't spend until the owner unfreezes it.\n${outcome.explorerUrl}`;
-  else if (outcome.verb === "DENY") text = `Denied ❌ — request #${checked.id} will not be paid.\n${outcome.explorerUrl}`;
-  else if (outcome.verb === "EXPIRED") text = `Request #${checked.id} had already expired, so it was closed instead of paid.\n${outcome.explorerUrl}`;
-  else if (outcome.paid) text = `Paid ✅ ${info?.amount} USDC to ${who} — verified onchain against Google's DKIM key.\n${outcome.explorerUrl}`;
-  else text = `Approved, but the payout failed — the vault may be underfunded or the payee blocked. The funds stay in the vault and this request is closed; ask the agent to try again.\n${outcome.explorerUrl}`;
-  return { kind: "done", outcome, text };
+  let receipt: Receipt;
+  if (outcome.verb === "FREEZE") {
+    text = `Vault frozen 🧊 — agents can't spend until the owner unfreezes it.\n${outcome.explorerUrl}`;
+    receipt = { kind: "frozen", explorerUrl: outcome.explorerUrl };
+  } else if (outcome.verb === "DENY") {
+    text = `Denied ❌ — request #${checked.id} will not be paid.\n${outcome.explorerUrl}`;
+    receipt = { ...base, kind: "denied" };
+  } else if (outcome.verb === "EXPIRED") {
+    text = `Request #${checked.id} had already expired, so it was closed instead of paid.\n${outcome.explorerUrl}`;
+    receipt = { kind: "expired", id: String(checked.id), explorerUrl: outcome.explorerUrl };
+  } else if (outcome.paid) {
+    text = `Paid ✅ ${info?.amount} USDC to ${who} — verified onchain against Google's DKIM key.\n${outcome.explorerUrl}`;
+    receipt = { ...base, kind: "paid" };
+  } else {
+    text = "Approved, but the payout failed — the vault may be underfunded or the payee blocked. The funds stay in the vault and this request is closed; ask the agent to try again.\n" + outcome.explorerUrl;
+    receipt = { ...base, kind: "failed" };
+  }
+  return { kind: "done", outcome, text, receipt };
 }
