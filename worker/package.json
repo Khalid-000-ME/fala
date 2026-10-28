@@ -5,13 +5,20 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "mailbox": "tsx src/mailbox.ts"
   },
   "dependencies": {
+    "dotenv": "^18.0.9",
+    "imapflow": "^2.9.1",
+    "nodemailer": "^10.2.1",
     "viem": "^2.57.11"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261025.1",
+    "@types/node": "^26.6.5",
+    "@types/nodemailer": "^8.0.2",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "wrangler": "^4.152.0"
   }
