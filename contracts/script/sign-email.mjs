@@ -63,7 +63,8 @@ const lines = spec.lines ?? [
   `subject:${spec.subject ?? "FALA APPROVE 1 deadbeef"}`,
   `date:${spec.date ?? "Mon, 26 Oct 2026 10:00:00 +0000"}`,
 ];
-let tags = `v=1; a=${a}; c=${c}; d=${d}; s=${s}; t=${t}; h=${h}; bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=; b=`;
+const tPart = spec.noT ? "" : `t=${t}; `;
+let tags = `v=1; a=${a}; c=${c}; d=${d}; s=${s}; ${tPart}h=${h}; bh=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=; b=`;
 if (spec.dkimTags) tags = spec.dkimTags; // full override for malformed-tag cases
 const dkim = `dkim-signature:${tags}`;
 
