@@ -2,7 +2,20 @@
 
 ## Arc testnet (chain 5042002)
 
-### Primary — trusts Google's real DKIM key
+### Primary — deployed through Arc Studio, trusts Google's real DKIM key
+
+| Item | Value |
+|---|---|
+| FalaVault | [`0xfcf31860d0ef159b7967a72b37bc4b2104d5f127`](https://explorer.testnet.arc.io/address/0xfcf31860d0ef159b7967a72b37bc4b2104d5f127) |
+| Deploy tx / block | [`0x60be8a3f…dedff`](https://explorer.testnet.arc.io/tx/0x60be8a3f36b76f5b3c943127abd20cd42d502864f9d1856615efcc4d5ccdedff) / 69628054 |
+| Studio project | https://studio.arc.io/app/7b5f36e6-a2d1-4ccc-b925-f3cf4a4bd39b |
+| Owner | `0x4d17A9BFC6d225A9d95869B922128c6412371Acc` |
+| Approver / DKIM key | `fala.approver.1@gmail.com` / `gmail.com` `20260707` (Google's real key) |
+| Contract version | includes the Studio security-review fixes (strict From parsing, bounded vault-bound FREEZE emails) |
+
+Verified independently on-chain: `owner()`, `approverHash`, and Gmail's real signed email passes every check up to the intent lookup.
+
+### Earlier vault (pre-review contract) — trusts Google's real DKIM key
 
 | Item | Value |
 |---|---|
