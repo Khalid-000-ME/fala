@@ -46,7 +46,7 @@ describe("relayRaw", () => {
   it("reports deny, freeze and expiry outcomes", async () => {
     const mk = (verb: string, v: number) => deps({ check: vi.fn(async () => ({ verb: v, id: 42n })), submit: vi.fn(async () => ({ ...outcome, verb })) as never });
     expect(((await relayRaw(await eml("FALA DENY 42 7f3a9c1b"), mk("DENY", 2))) as { text: string }).text).toContain("Denied");
-    expect(((await relayRaw(await eml("FALA FREEZE 0 0"), mk("FREEZE", 3))) as { text: string }).text).toContain("frozen");
+    expect(((await relayRaw(await eml("FALA FREEZE 0 1a2b3c4d"), mk("FREEZE", 3))) as { text: string }).text).toContain("frozen");
     expect(((await relayRaw(await eml("FALA APPROVE 42 7f3a9c1b"), mk("EXPIRED", 1))) as { text: string }).text).toContain("expired");
   });
 

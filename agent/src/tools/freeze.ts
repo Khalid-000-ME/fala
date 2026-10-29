@@ -4,7 +4,7 @@ import { relayRaw } from "../../../worker/src/relay.js";
 import { keyFromTxt } from "../../../src/lib/dkim.js";
 import { readFileSync } from "node:fs";
 import crypto from "node:crypto";
-import { requestPayment, write } from "../lib/fala.js";
+import { requestPayment, subjectFor, write } from "../lib/fala.js";
 import { signStandin } from "./standin.js";
 import { vendors } from "../lib/config.js";
 
@@ -14,7 +14,7 @@ const approver = process.env.APPROVER_EMAIL!;
 const pub = crypto.createPublicKey(readFileSync(new URL("../../../.secrets/test-key-standin.pem", import.meta.url)));
 const txt = `v=DKIM1; k=rsa; p=${(pub.export({ type: "spki", format: "der" }) as Buffer).toString("base64")}`;
 
-const raw = new TextEncoder().encode(await signStandin({ subject: "FALA FREEZE 0 0", from: `Approver <${approver}>` }));
+const raw = new TextEncoder().encode(await signStandin({ subject: await subjectFor(0n, 3), from: `Approver <${approver}>` }));
 const res = await relayRaw(raw, { approverEmail: approver, getKey: () => keyFromTxt(txt), check: c.check, submit: c.submit, intent: c.intent, errorName: c.errorName });
 console.log("freeze email  ->", res.kind === "done" ? res.text.replace("\n", "  ") : JSON.stringify(res));
 

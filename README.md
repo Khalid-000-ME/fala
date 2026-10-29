@@ -44,7 +44,7 @@ The relayer cannot change anything: payee and amount come from the intent stored
 
 ```
 FALA <APPROVE|DENY> <intentId> <code>      code = 8 lowercase hex = first 4 bytes of
-FALA FREEZE 0 0                            keccak256(chainid, vault, id, agent, payee, amount)
+FALA FREEZE 0 <code>                       code = keccak256(chainid, vault, "FREEZE"): bound to one vault
 ```
 An optional `re: ` prefix and surrounding spaces are tolerated; anything else is `SubjectMalformed`. The code binds an email to
 one exact request, so an approval can't be reused for another amount, payee, vault or chain.

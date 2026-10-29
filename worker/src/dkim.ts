@@ -187,4 +187,5 @@ export async function verifyBlock(headerBlock: Bytes, sig: Bytes, spki: Bytes): 
 
 /** Subject grammar the contract enforces. */
 export const SUBJECT_RE = /^(?:[Rr][Ee]: )?FALA (APPROVE|DENY) ([1-9][0-9]{0,17}) ([0-9a-f]{8})$/;
-export const FREEZE_SUBJECT = "FALA FREEZE 0 0";
+/** FREEZE subjects carry a code bound to the vault and chain: read it from `subjectFor(0, 3)` on the vault. */
+export const FREEZE_SUBJECT_RE = /^(?:[Rr][Ee]: )?FALA FREEZE 0 ([0-9a-f]{8})$/;

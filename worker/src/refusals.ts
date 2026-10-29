@@ -14,7 +14,7 @@ export const REFUSALS: Record<string, string> = {
   BadSignature: "The RSA signature doesn't match these headers. Something changed after Google signed it, or it wasn't signed by this key.",
   FromNotApprover: "The signature is genuine, but the sender isn't the approver address registered in this vault.",
   DomainMismatch: "The From address belongs to a different domain than the one that signed the email.",
-  SubjectMalformed: "The subject isn't exactly `FALA APPROVE|DENY <id> <code>` (or `FALA FREEZE 0 0`).",
+  SubjectMalformed: "The subject isn't exactly `FALA APPROVE|DENY <id> <code>` (or `FALA FREEZE 0 <code>`).",
   IntentNotPending: "That payment request is no longer waiting — it was already approved, denied, cancelled or expired. An email can only be used once.",
   IntentExpired: "That payment request ran out of time before the reply arrived.",
   CodeMismatch: "The code in the subject doesn't match this exact payment request (amount, payee, vault, chain).",
