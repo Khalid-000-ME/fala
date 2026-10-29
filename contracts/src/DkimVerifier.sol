@@ -180,14 +180,39 @@ library DkimVerifier {
     function _parseFrom(bytes memory b, uint256 s, uint256 e, DkimResult memory r) private pure {
         (uint256 a, uint256 z) = _trim(b, s, e);
 
-        // the address is between the LAST '<' and the next '>' (display names may contain '<')
+        // Quote-aware scan of the whole field value. Outside quoted strings the grammar is deliberately tiny:
+        // no comments, no address lists, at most one `<...>`, and nothing after its closing '>'. A display name may be
+        // quoted (and then may contain '<', '>', ',' ...), so an address hidden in a display name or a comment can
+        // never be mistaken for the real one.
         uint256 lt = type(uint256).max;
+        uint256 gt = type(uint256).max;
+        bool inQuote;
         for (uint256 i = a; i < z; i++) {
-            if (b[i] == "<") lt = i;
+            bytes1 c = b[i];
+            if (inQuote) {
+                if (c == "\\") {
+                    i++; // quoted-pair: skip the escaped byte
+                    if (i >= z) revert BadFrom();
+                } else if (c == '"') {
+                    inQuote = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inQuote = true;
+            } else if (c == "<") {
+                if (lt != type(uint256).max) revert BadFrom();
+                lt = i;
+            } else if (c == ">") {
+                if (lt == type(uint256).max || gt != type(uint256).max) revert BadFrom();
+                gt = i;
+            } else if (c == "(" || c == ")" || c == "," || c == ";") {
+                revert BadFrom();
+            }
         }
+        if (inQuote) revert BadFrom();
         if (lt != type(uint256).max) {
-            uint256 gt = _indexOf(b, ">", lt + 1, z);
-            if (gt == z) revert BadFrom();
+            if (gt == type(uint256).max || gt != z - 1) revert BadFrom();
             a = lt + 1;
             z = gt;
         }

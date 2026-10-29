@@ -49,6 +49,11 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
     uint8 public constant REJ_OVER_HARD_CAP = 4;
     uint8 public constant REJ_PAYOUT_FAILED = 5;
 
+    /// @dev Clock slack between the DKIM `t=` and `block.timestamp`/`createdAt`, in seconds.
+    uint256 public constant CLOCK_SLACK = 5 minutes;
+    /// @dev A FREEZE email older than this is refused: a withheld freeze cannot be replayed months later.
+    uint256 public constant FREEZE_MAX_AGE = 1 days;
+
     struct AgentCfg {
         bool active;
         uint64 autoPerTx;
@@ -93,6 +98,7 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
     mapping(bytes32 => DkimKey) public keys;
     bytes32[] public keyIds;
     mapping(bytes32 => uint256) public domainKeyCount;
+    mapping(bytes32 => bytes32) public keyDomain; // keyId => keccak256(lowercase d=)
 
     event Deposited(address indexed from, uint256 amount6);
     event Withdrawn(address indexed to, uint256 amount6);
@@ -126,6 +132,7 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
     error NotPending();
     error NotExpired();
     error KeyExists();
+    error RenounceDisabled();
 
     constructor(
         address usdc_,
@@ -136,9 +143,15 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         bytes memory n,
         bytes memory e
     ) Ownable(owner_) {
+        if (usdc_.code.length == 0) revert InvalidConfig(); // a call to a code-less address would "succeed" silently
         usdc = IERC20(usdc_);
         _addKey(domain, selector, n, e, uint40(block.timestamp));
         _setApprover(approverEmail);
+    }
+
+    /// @dev Disabled: renouncing would strand the funds and make `unfreeze` / key revocation impossible forever.
+    function renounceOwnership() public pure override {
+        revert RenounceDisabled();
     }
 
     // ------------------------------------------------------------------ funds
@@ -153,8 +166,12 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         revert UseDeposit();
     }
 
+    /// @notice Owner pulls USDC out. Like every payout it never reverts on a token failure: it emits `PayoutFailed`.
     function withdraw(address to, uint256 amount6) external onlyOwner nonReentrant {
-        usdc.safeTransfer(to, amount6);
+        if (!_payNoRevert(to, amount6)) {
+            emit PayoutFailed(0, to, amount6);
+            return;
+        }
         emit Withdrawn(to, amount6);
     }
 
@@ -244,11 +261,13 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
             knownPayee[payee] && amount6 <= a.autoPerTx && uint256(a.autoSpentToday) + amount6 <= a.autoDaily
                 && vaultBalance() >= amount6
         ) {
+            a.autoSpentToday += amount6; // effects before the external call; undone if the transfer fails
             if (!_payNoRevert(payee, amount6)) {
+                a.autoSpentToday -= amount6;
+                emit PayoutFailed(0, payee, amount6);
                 emit IntentRejected(msg.sender, payee, amount6, REJ_PAYOUT_FAILED);
                 return (Status.NONE, 0);
             }
-            a.autoSpentToday += amount6;
             emit AutoPaid(msg.sender, payee, amount6, memo);
             return (Status.AUTO_PAID, 0);
         }
@@ -295,7 +314,8 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         (uint8 verb, uint256 id, bytes4 code) = _parseSubject(r.subject);
 
         if (verb == VERB_FREEZE) {
-            if (r.t <= lastFreezeT) revert StaleTimestamp();
+            if (code != freezeCode()) revert CodeMismatch();
+            _checkFreeze(r.t);
             lastFreezeT = r.t;
             frozen = true;
             emit EmailFrozen(keyId, r.t);
@@ -326,18 +346,21 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         }
         emit Paid(id, i.payee, i.amount);
         uint64 tip = relayerTip;
-        if (tip > 0 && vaultBalance() >= tip) _payNoRevert(msg.sender, tip);
+        if (tip > 0 && vaultBalance() >= tip && !_payNoRevert(msg.sender, tip)) emit PayoutFailed(id, msg.sender, tip);
     }
 
     // ------------------------------------------------------------------ views
 
-    /// @notice Dry-run of `approveByEmail`: same checks, same named errors, no state change.
+    /// @notice Dry-run of `approveByEmail`: same checks, same named errors, no state change. One deliberate difference:
+    ///         for an otherwise valid reply to an intent that has expired, `approveByEmail` closes the intent as EXPIRED
+    ///         and returns without paying, while this view reverts `IntentExpired` so a relayer knows nothing will be paid.
     function checkEmail(bytes calldata headerBlock, bytes calldata sig) external view returns (uint8 verb, uint256 id) {
         (DkimVerifier.DkimResult memory r,) = _authenticate(headerBlock, sig);
         bytes4 code;
         (verb, id, code) = _parseSubject(r.subject);
         if (verb == VERB_FREEZE) {
-            if (r.t <= lastFreezeT) revert StaleTimestamp();
+            if (code != freezeCode()) revert CodeMismatch();
+            _checkFreeze(r.t);
             return (verb, id);
         }
         Intent storage i = intents[id];
@@ -350,9 +373,14 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         return intents[id].code;
     }
 
+    /// @notice The code a FREEZE reply must carry. Bound to this vault and chain, so one email cannot freeze other vaults.
+    function freezeCode() public view returns (bytes4) {
+        return bytes4(keccak256(abi.encode(block.chainid, address(this), "FREEZE")));
+    }
+
     /// @notice The exact subject the human's reply must carry, e.g. "FALA APPROVE 42 7f3a9c1b".
     function subjectFor(uint256 id, uint8 verb) external view returns (string memory) {
-        if (verb == VERB_FREEZE) return "FALA FREEZE 0 0";
+        if (verb == VERB_FREEZE) return string.concat("FALA FREEZE 0 ", _hex8(freezeCode()));
         string memory v = verb == VERB_APPROVE ? "APPROVE" : "DENY";
         return string.concat("FALA ", v, " ", _toString(id), " ", _hex8(intents[id].code));
     }
@@ -391,8 +419,16 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
     function _checkIntent(Intent storage i, bytes4 code, uint64 t) internal view {
         if (i.status != Status.PENDING) revert IntentNotPending();
         if (code != i.code) revert CodeMismatch();
-        // the email must have been signed after the intent existed (5 min clock slack) and before it expired
-        if (t != 0 && (uint256(t) + 300 < i.createdAt || t > i.expiresAt)) revert StaleTimestamp();
+        // the email must carry a signing time, and it must fall after the intent existed (clock slack) and before it expired
+        if (t == 0 || uint256(t) + CLOCK_SLACK < i.createdAt || t > i.expiresAt) revert StaleTimestamp();
+    }
+
+    /// @dev FREEZE has no intent to bind to, so it is bound to time: strictly newer than the last accepted freeze,
+    ///      not older than FREEZE_MAX_AGE, and not from the future (a far-future `t` would otherwise poison `lastFreezeT`).
+    function _checkFreeze(uint64 t) internal view {
+        if (t <= lastFreezeT || uint256(t) + FREEZE_MAX_AGE < block.timestamp || t > block.timestamp + CLOCK_SLACK) {
+            revert StaleTimestamp();
+        }
     }
 
     function _addKey(string memory domain, string memory selector, bytes memory n, bytes memory e, uint40 activeAt)
@@ -403,6 +439,7 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         bytes32 id = keccak256(abi.encode(d, keccak256(DkimVerifier._lower(bytes(selector)))));
         if (keys[id].n.length != 0) revert KeyExists();
         keys[id] = DkimKey({n: n, e: e, activeAt: activeAt, revoked: false});
+        keyDomain[id] = d;
         keyIds.push(id);
         domainKeyCount[d]++;
         emit KeyProposed(id, domain, selector, activeAt);
@@ -423,10 +460,20 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
             dom[i] = b[at + 1 + i];
         }
         bytes32 dh = keccak256(dom);
-        if (domainKeyCount[dh] == 0) revert InvalidConfig();
+        if (!_hasActiveKey(dh)) revert InvalidConfig();
         approverHash = keccak256(b);
         approverDomainHash = dh;
         emit ApproverSet(approverHash, dh);
+    }
+
+    /// @dev The approver's domain must have a key that can verify emails right now (registered, active, not revoked).
+    function _hasActiveKey(bytes32 domainHash) internal view returns (bool) {
+        for (uint256 i = 0; i < keyIds.length; i++) {
+            bytes32 id = keyIds[i];
+            DkimKey storage k = keys[id];
+            if (keyDomain[id] == domainHash && !k.revoked && block.timestamp >= k.activeAt) return true;
+        }
+        return false;
     }
 
     function _rollDay(AgentCfg storage a) internal {
@@ -446,7 +493,7 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         return ok && (data.length == 0 || (data.length >= 32 && abi.decode(data, (bool))));
     }
 
-    /// @dev Strict grammar: `[re: ]FALA <APPROVE|DENY|FREEZE> <id> <code>`; code = 8 lowercase hex (FREEZE: `0 0`).
+    /// @dev Strict grammar: `[re: ]FALA <APPROVE|DENY|FREEZE> <id> <code>`; code = 8 lowercase hex (FREEZE: id is `0`).
     function _parseSubject(bytes memory s) internal pure returns (uint8 verb, uint256 id, bytes4 code) {
         uint256 p = 0;
         uint256 end = s.length;
@@ -481,11 +528,8 @@ contract FalaVault is Ownable2Step, ReentrancyGuard {
         }
         p = q + 1;
 
-        if (verb == VERB_FREEZE) {
-            if (id != 0 || end - p != 1 || s[p] != "0") revert SubjectMalformed();
-            return (verb, 0, bytes4(0));
-        }
-        if (id == 0 || end - p != 8) revert SubjectMalformed();
+        if (verb == VERB_FREEZE ? id != 0 : id == 0) revert SubjectMalformed();
+        if (end - p != 8) revert SubjectMalformed();
         uint32 v;
         for (uint256 i = p; i < end; i++) {
             uint8 c = uint8(s[i]);
