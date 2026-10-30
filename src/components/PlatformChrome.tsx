@@ -1,8 +1,8 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { stallHint, useAuth } from "../hooks/useAuth";
 import { Logo, NetworkBadge } from "./Chrome";
 
 const NAV = [
@@ -11,7 +11,7 @@ const NAV = [
 ] as const;
 
 export function PlatformHeader() {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, stalled, authenticated, user, login, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const email = user?.google?.email ?? user?.email?.address;
@@ -32,8 +32,12 @@ export function PlatformHeader() {
             <button className="btn-ghost btn btn-sm font-mono" title="Sign out" onClick={async () => { await logout(); router.push("/"); }}>
               {email ?? "Account"} · sign out
             </button>
+          ) : ready ? (
+            <button className="btn btn-sm" onClick={() => login()}>Sign in with Google</button>
+          ) : stalled ? (
+            <span className="tag rounded-full bg-bad/10 px-3 py-1 text-bad" title={stallHint()}>sign-in unavailable</span>
           ) : (
-            <button className="btn btn-sm" disabled={!ready} onClick={() => login()}>Sign in with Google</button>
+            <span className="h-9 w-[150px] animate-pulse rounded-full bg-card" aria-label="Loading sign-in" />
           )}
         </div>
       </div>
