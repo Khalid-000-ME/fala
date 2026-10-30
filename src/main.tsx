@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, addRpcUrlOverrideToChain } from "@privy-io/react-auth";
 import { BrowserRouter } from "react-router-dom";
 import { wagmiConfig } from "./config/wagmi";
 import { ACTIVE } from "./config/chain";
@@ -12,6 +12,8 @@ import "./index.css";
 
 const qc = new QueryClient();
 const appId = import.meta.env.VITE_PRIVY_APP_ID as string | undefined;
+// Privy routes embedded-wallet RPC through its own providers, which do not serve Arc. Pin it to Arc's RPC.
+const PRIVY_CHAIN = addRpcUrlOverrideToChain(ACTIVE, ACTIVE.rpcUrls.default.http[0]);
 
 function Root() {
   if (!appId) return <div style={{ padding: 40, fontFamily: "monospace" }}>Set VITE_PRIVY_APP_ID in .env to enable sign-in.</div>;
@@ -22,8 +24,8 @@ function Root() {
         loginMethods: ["google"],
         appearance: { theme: "light", accentColor: "#0a0a0a", logo: undefined },
         embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
-        defaultChain: ACTIVE,
-        supportedChains: [ACTIVE],
+        defaultChain: PRIVY_CHAIN,
+        supportedChains: [PRIVY_CHAIN],
       }}
     >
       <WagmiProvider config={wagmiConfig}>
