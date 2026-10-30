@@ -11,6 +11,12 @@ await migrate();
 const app = new Hono();
 app.use("*", cors({ origin: env.webOrigin, allowHeaders: ["authorization", "content-type", "mcp-session-id", "mcp-protocol-version"], allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] }));
 app.get("/health", (c) => c.json({ ok: true, network: env.network }));
+// Dev diagnostics: the dashboard posts failed-transaction details here so they land in the server log.
+app.post("/debug/client-error", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  console.log("[client-error]", JSON.stringify(body, null, 2));
+  return c.json({ ok: true });
+});
 app.all("/mcp", (c) => handleMcp(c.req.raw));
 app.route("/", v1);
 app.route("/", api);
