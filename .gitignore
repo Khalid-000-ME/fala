@@ -19,3 +19,8 @@ FALA_PRD.md
 # real Gmail fixtures carry the sender/recipient addresses
 contracts/test/fixtures/gmail-real.json
 spike/
+
+# next.js
+.next
+next-env.d.ts
+tsconfig.tsbuildinfo
