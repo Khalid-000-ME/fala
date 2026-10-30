@@ -14,13 +14,13 @@ export const chain = defineChain({
   id: IDS[env.network], name: `Arc ${env.network}`, nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: { default: { http: [env.rpc] } },
 });
-export const publicClient = createPublicClient({ chain, transport: http(env.rpc) });
+export const publicClient = createPublicClient({ chain, transport: http(env.rpc, { retryCount: 8, retryDelay: 400, timeout: 20_000 }) });
 export const explorerTx = (h: string) => `${EXPLORER[env.network]}/tx/${h}`;
 const fees = { maxFeePerGas: parseGwei("25"), maxPriorityFeePerGas: parseGwei("1") };
 
 const walletFor = (key: Hex) => {
   const account = privateKeyToAccount(key);
-  return { account, client: createWalletClient({ account, chain, transport: http(env.rpc) }) };
+  return { account, client: createWalletClient({ account, chain, transport: http(env.rpc, { retryCount: 8, retryDelay: 400, timeout: 20_000 }) }) };
 };
 export const deployer = () => walletFor(env.deployerKey());
 
