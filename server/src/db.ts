@@ -5,7 +5,7 @@ export const db = createClient({ url: env.dbUrl });
 
 export async function migrate() {
   await db.batch([
-    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT, wallet TEXT NOT NULL, created_at INTEGER NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, wallet TEXT NOT NULL, created_at INTEGER NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS vaults (
        id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, address TEXT NOT NULL UNIQUE, deploy_block INTEGER NOT NULL,
        approver_email TEXT NOT NULL, min_balance INTEGER NOT NULL DEFAULT 0, owner_address TEXT NOT NULL, deploy_tx TEXT,
@@ -19,6 +19,14 @@ export async function migrate() {
     `CREATE TABLE IF NOT EXISTS notified (vault_id TEXT NOT NULL, intent_id INTEGER NOT NULL, PRIMARY KEY (vault_id, intent_id))`,
     `CREATE TABLE IF NOT EXISTS handled_mail (key TEXT PRIMARY KEY)`,
   ]);
+  await dropUserEmails();
+}
+
+/** Older databases kept the signer's Google address. We no longer collect it, so erase what was stored. */
+async function dropUserEmails() {
+  const cols = await db.execute(`PRAGMA table_info(users)`);
+  if (!cols.rows.some((c: any) => c.name === "email")) return;
+  await db.batch([`UPDATE users SET email = NULL`, `ALTER TABLE users DROP COLUMN email`]);
 }
 
 export const now = () => Math.floor(Date.now() / 1000);

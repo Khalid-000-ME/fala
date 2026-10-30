@@ -69,7 +69,6 @@ export default function Dashboard() {
 function NewVault({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (id: string) => void }) {
   const api = useApi();
   const { toast } = useTx();
-  const { user } = usePrivy();
   const [f, setF] = useState({ name: "", email: "", min: "5" });
   const [busy, setBusy] = useState(false);
   const gmail = /^[^\s@]+@gmail\.com$/i.test(f.email.trim());
@@ -88,7 +87,7 @@ function NewVault({ open, onClose, onDone }: { open: boolean; onClose: () => voi
     <Modal open={open} onClose={busy ? () => {} : onClose} title="New vault">
       <div className="space-y-4">
         <Field label="Vault name"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Procurement" /></Field>
-        <Field label="Send approval emails to (Gmail)"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder={user?.google?.email ?? "approver@gmail.com"} /></Field>
+        <Field label="Send approval emails to (Gmail)"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="approver@gmail.com" /></Field>
         <Field label="Minimum balance · USDC"><input className="input" inputMode="decimal" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} /></Field>
         <p className="cap">Replies from that Gmail are the only thing that can approve big payments, so use an address you control. We'll email you when the vault drops below the minimum. Tip: use a dedicated Gmail — the email headers are public onchain.</p>
         {err && <div className="cap text-bad">{err}</div>}

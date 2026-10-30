@@ -7,28 +7,28 @@ import { sha256 } from "./crypto.js";
 let privy: PrivyClient | undefined;
 const client = () => (privy ??= new PrivyClient(env.privyAppId(), env.privySecret()));
 
-export type Me = { id: string; email?: string; wallet: string };
+/** Deliberately no email: vault mail goes to the vault's own approver address, so we never hold the owner's personal one. */
+export type Me = { id: string; wallet: string };
 
 /** Resolve (and upsert) the signed-in user from a Privy access token. */
 export async function userFromToken(token: string): Promise<Me> {
   if (env.devLogin && token.startsWith("dev:")) {
     const [, id, wallet] = token.split(":");
-    await upsert({ id, wallet, email: `${id}@dev.local` });
-    return { id, wallet, email: `${id}@dev.local` };
+    await upsert({ id, wallet });
+    return { id, wallet };
   }
   const claims = await client().verifyAuthToken(token);
   const u = await client().getUser(claims.userId);
   const wallet = (u.linkedAccounts as any[]).find((a) => a.type === "wallet" && a.walletClientType === "privy")?.address
     ?? (u.linkedAccounts as any[]).find((a) => a.type === "wallet")?.address;
   if (!wallet) throw new Error("no wallet yet — finish signing in");
-  const email = (u.linkedAccounts as any[]).find((a) => a.type === "google_oauth")?.email ?? (u.linkedAccounts as any[]).find((a) => a.type === "email")?.address;
-  const me = { id: claims.userId, email, wallet };
+  const me = { id: claims.userId, wallet };
   await upsert(me);
   return me;
 }
 
 async function upsert(m: Me) {
-  await run(`INSERT INTO users (id,email,wallet,created_at) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET email=excluded.email, wallet=excluded.wallet`, [m.id, m.email ?? null, m.wallet, now()]);
+  await run(`INSERT INTO users (id,wallet,created_at) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET wallet=excluded.wallet`, [m.id, m.wallet, now()]);
 }
 
 export async function requireUser(c: Context, next: Next) {

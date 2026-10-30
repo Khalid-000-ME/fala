@@ -114,17 +114,17 @@ async function notifyPending() {
 
 /** Low-balance alert: at most once a day per vault, and re-armed as soon as the vault is topped up. */
 async function checkBalances() {
-  for (const v of await all<any>(`SELECT v.*, u.email AS owner_email FROM vaults v JOIN users u ON u.id=v.user_id WHERE v.min_balance > 0`)) {
+  for (const v of await all<any>(`SELECT * FROM vaults WHERE min_balance > 0`)) {
     const st = await vaultState(v.address).catch(() => undefined);
     if (!st) continue;
     const bal = Number(st.balance);
     if (bal >= v.min_balance) { if (v.low_notified_at) await run(`UPDATE vaults SET low_notified_at=NULL WHERE id=?`, [v.id]); continue; }
     if (v.low_notified_at && now() - v.low_notified_at < 86400) continue;
-    if (!v.owner_email) continue;
+    if (!v.approver_email) continue;
     const f = (n: number) => (n / 1e6).toFixed(2);
-    await send(lowBalanceEmail({ from: env.relayGmail(), to: v.owner_email, vault: v.name, balance: f(bal), minimum: f(v.min_balance), shortfall: f(v.min_balance - bal), vaultAddress: v.address, dashboardUrl: `${env.webOrigin}/vaults/${v.id}` }), v.owner_email);
+    await send(lowBalanceEmail({ from: env.relayGmail(), to: v.approver_email, vault: v.name, balance: f(bal), minimum: f(v.min_balance), shortfall: f(v.min_balance - bal), vaultAddress: v.address, dashboardUrl: `${env.webOrigin}/vaults/${v.id}` }), v.approver_email);
     await run(`UPDATE vaults SET low_notified_at=? WHERE id=?`, [now(), v.id]);
-    log(`[${v.name}] low-balance alert sent to ${v.owner_email}`);
+    log(`[${v.name}] low-balance alert sent to ${v.approver_email}`);
   }
 }
 

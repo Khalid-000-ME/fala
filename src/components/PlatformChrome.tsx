@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { stallHint, useAuth } from "../hooks/useAuth";
+import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
 
 const NAV = [
@@ -14,7 +15,8 @@ export function PlatformHeader() {
   const { ready, stalled, authenticated, user, login, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const email = user?.google?.email ?? user?.email?.address;
+  // Show the wallet, never the Google address: the header is on screen in demos and screenshots.
+  const addr = user?.wallet?.address;
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-white/85 backdrop-blur">
       <div className="wrap flex h-[68px] items-center justify-between gap-4">
@@ -30,7 +32,7 @@ export function PlatformHeader() {
           <NetworkBadge />
           {ready && authenticated ? (
             <button className="btn-ghost btn btn-sm font-mono" title="Sign out" onClick={async () => { await logout(); router.push("/"); }}>
-              {email ?? "Account"} · sign out
+              {addr ? short(addr) : "Account"} · sign out
             </button>
           ) : ready ? (
             <button className="btn btn-sm" onClick={() => login()}>Sign in with Google</button>
