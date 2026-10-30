@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 5173",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 5173",
     "test": "vitest run",
     "abi": "node scripts/gen-abi.mjs",
     "sync": "node scripts/sync-dkim.mjs",
