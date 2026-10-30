@@ -25,7 +25,9 @@ export default function ProviderTree({ children }: { children: React.ReactNode }
       config={{
         loginMethods: ["google"],
         appearance: { theme: "light", accentColor: "#0a0a0a" },
-        embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" } },
+        // Privy's confirmation modal prices gas through its own RPC, which does not serve Arc and fails there.
+        // We sign headlessly and show our own confirmation instead (requires "Enforce wallet UIs" off in the Privy dashboard).
+        embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" }, showWalletUIs: false },
         defaultChain: PRIVY_CHAIN,
         supportedChains: [PRIVY_CHAIN],
       }}
