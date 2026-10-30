@@ -1,7 +1,9 @@
+"use client";
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useCallback } from "react";
 
-export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8787";
+export const API = (process.env.NEXT_PUBLIC_API_URL as string | undefined) ?? "http://localhost:8787";
 
 export type AgentKind = "managed" | "connected" | "byo";
 export type AgentDto = {
