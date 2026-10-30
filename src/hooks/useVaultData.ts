@@ -10,7 +10,7 @@ import type { AgentRow, FeedEvent, IntentRow, KeyRow } from "../lib/types";
 import { demoAgents, demoEvents, demoIntents, demoKeys } from "../lib/demo";
 
 const WINDOW = 9_999n; // eth_getLogs on Arc is capped at ~10k blocks
-const POLL = 3_000;
+const POLL = 12_000; // Arc's public RPC rate-limits per IP; keep chain polling gentle
 
 export type VaultState = {
   balance: bigint;

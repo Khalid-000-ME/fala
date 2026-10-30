@@ -28,7 +28,7 @@ export default function VaultPage({ id }: { id: string }) {
   const [connecting, setConnecting] = useState<AgentDto | null>(null);
 
   const load = useCallback(() => api<VaultDto & { agents: AgentDto[] }>(`/api/vaults/${id}`).then(setV).catch((e) => (/not found/.test(e.message) ? setMissing(true) : toast(e.message, "bad"))), [api, id, toast]);
-  useEffect(() => { load(); const t = setInterval(load, 6000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
   const logs = useVaultLogs(v ? { address: v.address, deployBlock: BigInt(v.deployBlock) } : undefined);
   const known = useMemo(() => Object.entries(logs.payees).filter(([, k]) => k).map(([a]) => a), [logs.payees]);

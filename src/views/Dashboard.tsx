@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [open, setOpen] = useState(false);
 
   const load = () => api<VaultDto[]>("/api/vaults").then(setVaults).catch((e) => toast(e.message, "bad"));
-  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); /* eslint-disable-next-line */ }, []);
 
   return (
     <main>
