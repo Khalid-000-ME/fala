@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useState } from "react";
 import { usePublicClient } from "wagmi";
 import { DEMO, VAULT } from "../config/chain";
@@ -8,13 +10,15 @@ import { fmtUsdc, short } from "../lib/format";
 import { refusalText } from "../lib/refusals";
 import { Section } from "./ui";
 import { useTx } from "../hooks/useTx";
+import { useOwnerWallet } from "../lib/owner";
 
 type Verdict = { ok: true; verb: number; id: bigint; detail?: string } | { ok: false; name: string };
 const VERB = ["", "APPROVE", "DENY", "FREEZE"];
 
 export function Approve() {
   const client = usePublicClient();
-  const { vaultWrite, toast } = useTx();
+  const { toast } = useTx();
+  const { write } = useOwnerWallet();
   const [raw, setRaw] = useState("");
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,7 +84,7 @@ export function Approve() {
           )}
           <div className="mt-auto flex flex-wrap gap-3 pt-3">
             <button className="btn btn-sm" disabled={!args || busy} onClick={check}>Check onchain (free)</button>
-            <button className="btn-ghost btn btn-sm bg-white" disabled={!args || DEMO || !(verdict && verdict.ok)} onClick={() => args && vaultWrite("approveByEmail", [...args], "Submit approval")}>Submit onchain</button>
+            <button className="btn-ghost btn btn-sm bg-white" disabled={!args || DEMO || !(verdict && verdict.ok)} onClick={() => args && write(VAULT!, "approveByEmail", [...args], "Submit approval")}>Submit onchain</button>
           </div>
           {verdict && (
             <div className={`rounded-2xl px-4 py-3 text-[14px] ${verdict.ok ? "bg-[#e8f6ee] text-ok" : "bg-[#fde8e6] text-bad"}`}>

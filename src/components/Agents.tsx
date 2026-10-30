@@ -1,10 +1,13 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { isAddress } from "viem";
-import { DEMO } from "../config/chain";
+import { DEMO, VAULT } from "../config/chain";
 import { fmtUsdc, parseUsdc, short } from "../lib/format";
 import type { AgentRow, KeyRow } from "../lib/types";
 import { Empty, Field, Modal, Section } from "./ui";
 import { useTx } from "../hooks/useTx";
+import { useOwnerWallet } from "../lib/owner";
 import type { VaultState } from "../hooks/useVaultData";
 
 const LS = "fala:labels";
@@ -20,7 +23,7 @@ const mask = (email: string) => {
 };
 
 export function Agents({ state, payees, keys, owner }: { state?: VaultState; payees: Record<string, boolean>; keys: KeyRow[]; owner: boolean }) {
-  const { vaultWrite } = useTx();
+  const { write } = useOwnerWallet();
   const can = DEMO || owner;
   const [labels, setLabels] = useState<Record<string, string>>(() => loadJson(LS, {}));
   const [editing, setEditing] = useState<AgentRow | "new" | null>(null);
@@ -77,13 +80,13 @@ export function Agents({ state, payees, keys, owner }: { state?: VaultState; pay
             {known.length ? known.map((p) => (
               <li key={p} className="flex items-center justify-between gap-3 font-mono text-[13px]">
                 <span>{short(p, 6)}</span>
-                <button className="cap hover:text-bad disabled:opacity-40" disabled={!can} onClick={() => vaultWrite("setPayee", [p, false], "Remove payee")}>[ remove ]</button>
+                <button className="cap hover:text-bad disabled:opacity-40" disabled={!can} onClick={() => write(VAULT!, "setPayee", [p, false], "Remove payee")}>[ remove ]</button>
               </li>
             )) : <li className="cap">None yet — every payment needs your approval.</li>}
           </ul>
           <div className="mt-4 flex gap-3">
             <input className="input" placeholder="0x… payee" value={payee} onChange={(e) => setPayee(e.target.value)} />
-            <button className="btn shrink-0" disabled={!can || !isAddress(payee)} onClick={async () => (await vaultWrite("setPayee", [payee, true], "Add payee")) && setPayee("")}>Add</button>
+            <button className="btn shrink-0" disabled={!can || !isAddress(payee)} onClick={async () => (await write(VAULT!, "setPayee", [payee, true], "Add payee")) && setPayee("")}>Add</button>
           </div>
         </div>
         <ApproverCard keys={keys} state={state} can={can} />
@@ -95,7 +98,7 @@ export function Agents({ state, payees, keys, owner }: { state?: VaultState; pay
 }
 
 function ApproverCard({ keys, state, can }: { keys: KeyRow[]; state?: VaultState; can: boolean }) {
-  const { vaultWrite } = useTx();
+  const { write } = useOwnerWallet();
   const [email, setEmail] = useState(() => loadJson<string>("fala:approver", ""));
   const now = Math.floor(Date.now() / 1000);
   const remember = (v: string) => { setEmail(v); saveJson("fala:approver", v); };
@@ -116,7 +119,7 @@ function ApproverCard({ keys, state, can }: { keys: KeyRow[]; state?: VaultState
               <span>{k.domain} · <span className="text-mute">{k.selector}</span></span>
               <span className={revoked ? "text-bad" : waiting ? "text-warn" : "text-ok"}>
                 {revoked ? "revoked" : waiting ? "timelocked" : "active"}
-                {!revoked && <button className="cap ml-3 hover:text-bad disabled:opacity-40" disabled={!can} onClick={() => vaultWrite("revokeKey", [k.id], "Revoke key")}>[ revoke ]</button>}
+                {!revoked && <button className="cap ml-3 hover:text-bad disabled:opacity-40" disabled={!can} onClick={() => write(VAULT!, "revokeKey", [k.id], "Revoke key")}>[ revoke ]</button>}
               </span>
             </li>
           );
@@ -129,7 +132,7 @@ function ApproverCard({ keys, state, can }: { keys: KeyRow[]; state?: VaultState
 }
 
 function AgentModal({ target, onClose }: { target: AgentRow | "new" | null; onClose: () => void }) {
-  const { vaultWrite } = useTx();
+  const { write } = useOwnerWallet();
   const isNew = target === "new";
   const cur = target && target !== "new" ? target : null;
   const [f, setF] = useState({ agent: "", per: "0.20", daily: "1", cap: "5", active: true });
@@ -141,7 +144,7 @@ function AgentModal({ target, onClose }: { target: AgentRow | "new" | null; onCl
   const up = (k: "agent" | "per" | "daily" | "cap") => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
   const err = !isAddress(f.agent) ? "Agent must be a valid address" : parseUsdc(f.per) > parseUsdc(f.cap) ? "Auto per-tx can't exceed the hard cap" : null;
   const save = async () => {
-    if (await vaultWrite("setAgent", [f.agent, parseUsdc(f.per), parseUsdc(f.daily), parseUsdc(f.cap), f.active], isNew ? "Register agent" : "Update limits")) onClose();
+    if (await write(VAULT!, "setAgent", [f.agent, parseUsdc(f.per), parseUsdc(f.daily), parseUsdc(f.cap), f.active], isNew ? "Register agent" : "Update limits")) onClose();
   };
   return (
     <Modal open={!!target} onClose={onClose} title={isNew ? "Register agent" : "Edit limits"}>

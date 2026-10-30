@@ -1,10 +1,12 @@
+"use client";
+
 import { useState } from "react";
-import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { DEMO, VAULT, explorerAddr } from "../config/chain";
 import { fmtUsdc, parseUsdc, short } from "../lib/format";
 import { Section, Stat } from "./ui";
 import { useTx } from "../hooks/useTx";
+import { useOwnerWallet } from "../lib/owner";
 import type { VaultState } from "../hooks/useVaultData";
 import type { IntentRow } from "../lib/types";
 
@@ -77,7 +79,7 @@ export function HowItWorks() {
 }
 
 export function Overview({ state, intents, owner }: { state?: VaultState; intents: IntentRow[]; owner: boolean }) {
-  const { vaultWrite } = useTx();
+  const { write } = useOwnerWallet();
   const day = Math.floor(Date.now() / 1000 / 86400);
   const autoToday = (state?.agents ?? []).reduce((s, a) => s + a.autoSpentToday, 0n);
   const approved = intents.filter((i) => i.status === "APPROVED").length;
@@ -95,7 +97,7 @@ export function Overview({ state, intents, owner }: { state?: VaultState; intent
             <div className="text-[28px] tracking-tightest">🧊 Vault frozen</div>
             <div className="cap !text-white/70 mt-1">A FREEZE email from the approver stopped every agent. Only the owner wallet can unfreeze.</div>
           </div>
-          <button className="rounded-full bg-white px-5 py-2.5 text-[14px] text-ink disabled:opacity-40" disabled={!DEMO && !owner} onClick={() => vaultWrite("unfreeze", [], "Unfreeze")}>
+          <button className="rounded-full bg-white px-5 py-2.5 text-[14px] text-ink disabled:opacity-40" disabled={!DEMO && !owner} onClick={() => write(VAULT!, "unfreeze", [], "Unfreeze")}>
             Unfreeze (owner)
           </button>
         </div>
@@ -112,8 +114,8 @@ export function Overview({ state, intents, owner }: { state?: VaultState; intent
 }
 
 function Funds({ state, owner }: { state?: VaultState; owner: boolean }) {
-  const { address } = useAccount();
-  const { vaultWrite } = useTx();
+  const { address } = useOwnerWallet();
+  const { write } = useOwnerWallet();
   const [dep, setDep] = useState("");
   const [wd, setWd] = useState("");
   const [busy, setBusy] = useState(false);
@@ -122,13 +124,13 @@ function Funds({ state, owner }: { state?: VaultState; owner: boolean }) {
     setBusy(true);
     // native USDC has 18 decimals; the vault converts to 6 and needs a multiple of 1e12
     const value = parseUnits(dep || "0", 18);
-    if (value > 0n && (await vaultWrite("deposit", [], "Deposit", value))) setDep("");
+    if (value > 0n && (await write(VAULT!, "deposit", [], "Deposit", value))) setDep("");
     setBusy(false);
   };
   const withdraw = async () => {
     if (!address) return;
     setBusy(true);
-    if (await vaultWrite("withdraw", [address, parseUsdc(wd)], "Withdraw")) setWd("");
+    if (await write(VAULT!, "withdraw", [address, parseUsdc(wd)], "Withdraw")) setWd("");
     setBusy(false);
   };
 

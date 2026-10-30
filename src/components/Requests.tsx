@@ -1,12 +1,15 @@
+"use client";
+
 import { useMemo, useState } from "react";
-import { explorerTx } from "../config/chain";
+import { explorerTx, VAULT } from "../config/chain";
 import { ago, countdown, fmtUsdc, short } from "../lib/format";
 import { REJECTION, type FeedEvent, type FeedKind, type IntentRow } from "../lib/types";
 import { Empty, Section } from "./ui";
 import { useTx } from "../hooks/useTx";
+import { useOwnerWallet } from "../lib/owner";
 import { useNow } from "../hooks/useVaultData";
 
-const ENV_INBOUND = import.meta.env.VITE_INBOUND_ADDRESS as string | undefined;
+const ENV_INBOUND = process.env.NEXT_PUBLIC_INBOUND_ADDRESS as string | undefined;
 
 const CHIP: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "Pending", cls: "bg-[#fff4de] text-warn" },
@@ -22,7 +25,8 @@ const mailto = (to: string, subject: string) => `mailto:${to}?subject=${encodeUR
 
 export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: IntentRow[]; ttl: number; owner: boolean; onCancel?: (id: bigint) => void; inbound?: string }) {
   const now = useNow();
-  const { vaultWrite, toast } = useTx();
+  const { toast } = useTx();
+  const { write } = useOwnerWallet();
   const live = (i: IntentRow) => i.status === "PENDING" && i.expiresAt > now;
   const waiting = intents.filter(live);
   void ttl;
@@ -56,7 +60,7 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
               ) : (
                 <span className="cap">Check your inbox for the Approve / Deny buttons.</span>
               )}
-              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => (onCancel ? onCancel(i.id) : vaultWrite("cancel", [i.id], "Cancel request"))}>[ cancel · owner ]</button>
+              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => (onCancel ? onCancel(i.id) : write(VAULT!, "cancel", [i.id], "Cancel request"))}>[ cancel · owner ]</button>
             </div>
           </div>
         ))}

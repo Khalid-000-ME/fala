@@ -1,3 +1,5 @@
+"use client";
+
 import { useSignTransaction, useWallets } from "@privy-io/react-auth";
 import { encodeFunctionData, type Address, type Hex } from "viem";
 import { useCallback } from "react";
