@@ -16,5 +16,9 @@ app.route("/", v1);
 app.route("/", api);
 app.onError((e, c) => { console.error(e); return c.json({ error: e.message }, 500); });
 
+// The API must outlive a flaky network: a dropped IMAP/RPC socket should never take the server down.
+process.on("uncaughtException", (e) => console.error("uncaught:", e));
+process.on("unhandledRejection", (e) => console.error("unhandled rejection:", e));
+
 serve({ fetch: app.fetch, port: env.port }, (i) => console.log(`fala server on :${i.port} (${env.network})`));
 if (process.env.RELAY !== "0") startRelay();
