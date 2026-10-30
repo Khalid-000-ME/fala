@@ -2,11 +2,14 @@ import { defineChain } from "viem";
 
 const usdcNative = { name: "USDC", symbol: "USDC", decimals: 18 } as const;
 
+// In the browser, talk to Arc through this app's own /api/rpc proxy (see app/api/rpc/route.ts).
+const viaProxy = (direct: string) => (typeof window !== "undefined" ? `${window.location.origin}/api/rpc` : direct);
+
 export const arcMainnet = defineChain({
   id: 5042,
   name: "Arc",
   nativeCurrency: usdcNative,
-  rpcUrls: { default: { http: ["https://rpc.mainnet.arc.io"] } },
+  rpcUrls: { default: { http: [viaProxy("https://rpc.mainnet.arc.io")] } },
   blockExplorers: { default: { name: "Arc Explorer", url: "https://explorer.arc.io" } },
 });
 
@@ -14,7 +17,7 @@ export const arcTestnet = defineChain({
   id: 5042002,
   name: "Arc Testnet",
   nativeCurrency: usdcNative,
-  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_TESTNET_RPC ?? "https://rpc.testnet.arc.io"] } },
+  rpcUrls: { default: { http: [viaProxy(process.env.NEXT_PUBLIC_TESTNET_RPC ?? "https://rpc.testnet.arc.io")] } },
   blockExplorers: { default: { name: "Arc Testnet Explorer", url: "https://explorer.testnet.arc.io" } },
   testnet: true,
 });
