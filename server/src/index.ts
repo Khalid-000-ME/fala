@@ -11,6 +11,12 @@ await migrate();
 const app = new Hono();
 app.use("*", cors({ origin: env.webOrigin, allowHeaders: ["authorization", "content-type", "mcp-session-id", "mcp-protocol-version"], allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] }));
 app.get("/health", (c) => c.json({ ok: true, network: env.network }));
+// Without this, a request that fails in the browser leaves no trace at all on the server.
+app.use("*", async (c, next) => {
+  const t = Date.now();
+  await next();
+  if (c.req.path !== "/health") console.log(`[http] ${c.req.method} ${c.req.path} -> ${c.res.status} ${Date.now() - t}ms`);
+});
 // Dev diagnostics: the dashboard posts failed-transaction details here so they land in the server log.
 app.post("/debug/client-error", async (c) => {
   const body = await c.req.json().catch(() => ({}));
