@@ -44,7 +44,8 @@ export function useOwnerWallet() {
             chainId: ACTIVE.id,
             type: 2,
           },
-          { address },
+          // Privy's modal prices gas through its own RPC, which does not serve Arc. Skip it for this call.
+          { address, uiOptions: { showWalletUIs: false } },
         );
         // eth_signTransaction returns the serialized signed transaction, not a bare 65-byte signature.
         if (signature.length <= 134) throw new Error("Your wallet returned a signature instead of a signed transaction");
