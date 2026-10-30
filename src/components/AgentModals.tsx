@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { isAddress } from "viem";
 import { useApi, type AgentDto, type AgentKind, type KeyDto, type VaultDto } from "../lib/api";

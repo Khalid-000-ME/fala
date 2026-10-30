@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, type ReactNode } from "react";
 
 export function Section({ id, title, sub, children, aside }: { id?: string; title: ReactNode; sub?: ReactNode; children: ReactNode; aside?: ReactNode }) {
