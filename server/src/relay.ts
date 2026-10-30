@@ -59,6 +59,8 @@ async function handleReply(raw: Uint8Array) {
 
 async function readInbox() {
   const c = new ImapFlow({ host: "imap.gmail.com", port: 993, secure: true, auth: { user: env.relayGmail(), pass: env.relayPass() }, logger: false });
+  // ImapFlow emits 'error' on socket timeouts/disconnects; without a listener Node kills the whole process.
+  c.on("error", (e) => log(`imap socket: ${(e as Error).message}`));
   await c.connect();
   try {
     for (const box of ["INBOX", "[Gmail]/Spam"]) {
@@ -79,7 +81,7 @@ async function readInbox() {
         }
       } finally { lock.release(); }
     }
-  } finally { await c.logout(); }
+  } finally { await c.logout().catch(() => undefined); }
 }
 
 async function notifyPending() {

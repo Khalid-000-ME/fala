@@ -106,6 +106,8 @@ async function handle(raw: Uint8Array, dry = false) {
 /** Read unseen mail from the approver over IMAP and relay each one onchain. */
 async function readReplies() {
   const client = new ImapFlow({ host: "imap.gmail.com", port: 993, secure: true, auth: { user: relayUser(), pass: need("RELAY_APP_PASSWORD") }, logger: false });
+  // ImapFlow emits 'error' on socket timeouts; without a listener Node kills the process.
+  client.on("error", (e) => log(`imap socket: ${(e as Error).message}`));
   await client.connect();
   try {
     for (const box of ["INBOX", "[Gmail]/Spam"]) {
@@ -129,7 +131,7 @@ async function readReplies() {
       }
     }
   } finally {
-    await client.logout();
+    await client.logout().catch(() => undefined);
   }
 }
 
