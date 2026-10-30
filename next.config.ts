@@ -4,8 +4,11 @@ const config: NextConfig = {
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   webpack: (cfg) => {
-    // wagmi's connector barrel reaches into Coinbase's SDK, which has optional deps we never use.
-    cfg.resolve.alias = { ...cfg.resolve.alias, "@x402/evm": false, "@x402/common": false };
+    // Optional peer deps reached by wagmi's and Privy's barrels (Coinbase x402, Farcaster mini-apps).
+    // We use none of them; without these stubs webpack fails to resolve and Privy never initializes.
+    for (const m of ["@x402/evm", "@x402/common", "@x402/svm", "@farcaster/mini-app-solana"]) {
+      cfg.resolve.alias = { ...cfg.resolve.alias, [m]: false };
+    }
     return cfg;
   },
 };
