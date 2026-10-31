@@ -12,7 +12,7 @@ import { Empty, Section, Stat } from "../components/ui";
 import { Activity, Requests } from "../components/Requests";
 import { AddAgent, ConnectAgent, EditLimits } from "../components/AgentModals";
 import { explorerAddr } from "../config/chain";
-import { short } from "../lib/format";
+import { parseUsdc, short } from "../lib/format";
 
 const KIND_LABEL = { managed: "Fala agent", connected: "Connected", byo: "Own agent" } as const;
 
@@ -127,6 +127,7 @@ function Settings({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDon
   const [min, setMin] = useState(v.minBalance);
   const [email, setEmail] = useState(v.approverEmail);
   const [dep, setDep] = useState("");
+  const [wd, setWd] = useState("");
   const [busy, setBusy] = useState("");
   const emailOk = /^[^\s@]+@gmail\.com$/i.test(email.trim());
 
@@ -140,13 +141,31 @@ function Settings({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDon
     setBusy("");
   };
   const deposit = async () => { setBusy("dep"); if (await owner.write(v.address, "deposit", [], "Deposit", parseUnits(dep || "0", 18))) { setDep(""); onDone(); } setBusy(""); };
+  // withdraw() takes 6-decimal USDC and never reverts on a failed payout, so bound the amount here.
+  const tooMuch = Number(wd || 0) > Number(v.balance);
+  const withdraw = async () => {
+    setBusy("wd");
+    if (await owner.write(v.address, "withdraw", [owner.address as Address, parseUsdc(wd)], "Withdraw")) { setWd(""); onDone(); }
+    setBusy("");
+  };
 
   return (
-    <div className="mt-4 grid gap-4 lg:grid-cols-3">
+    <div className="mt-4 grid gap-4 sm:grid-cols-2">
       <div className="card">
         <div className="cap">Fund the vault</div>
         <div className="mt-4 flex gap-3"><input className="input" inputMode="decimal" placeholder="0.00" value={dep} onChange={(e) => setDep(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !dep || !!busy} onClick={deposit}>{busy === "dep" ? "…" : "Deposit"}</button></div>
         <div className="cap mt-3">From your wallet {owner.address ? short(owner.address) : ""}. On testnet, get USDC from the Arc faucet.</div>
+      </div>
+      <div className="card">
+        <div className="cap">Withdraw · USDC</div>
+        <div className="mt-4 flex gap-3">
+          <input className="input" inputMode="decimal" placeholder="0.00" value={wd} onChange={(e) => setWd(e.target.value)} />
+          <button className="btn-ghost btn shrink-0" disabled={!isOwner || !!busy} onClick={() => setWd(v.balance)}>Max</button>
+          <button className="btn shrink-0" disabled={!isOwner || !wd || Number(wd) <= 0 || tooMuch || !!busy} onClick={withdraw}>{busy === "wd" ? "…" : "Withdraw"}</button>
+        </div>
+        <div className={`cap mt-3 ${tooMuch ? "text-bad" : ""}`}>
+          {tooMuch ? `The vault only holds ${v.balance} USDC.` : <>Back to your wallet {owner.address ? short(owner.address) : ""}. Pending requests are not reserved.</>}
+        </div>
       </div>
       <div className="card">
         <div className="cap">Minimum balance · USDC</div>
