@@ -25,8 +25,8 @@ export function useOwnerWallet() {
 
   const send = useCallback(
     async (to: Address, data: Hex | undefined, value: bigint, label: string) => {
-      if (!wallet || !address) return toast("Your wallet isn't ready yet — give it a second", "bad"), false;
-      if (!publicClient) return toast("No connection to Arc — try again in a moment", "bad"), false;
+      if (!wallet || !address) return toast("Your wallet isn't ready yet. Give it a second.", "bad"), false;
+      if (!publicClient) return toast("No connection to Arc. Try again in a moment.", "bad"), false;
       let step = "nonce";
       try {
         const nonce = await publicClient.getTransactionCount({ address, blockTag: "pending" });

@@ -34,9 +34,9 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
   const copy = (s: string) => navigator.clipboard?.writeText(s).then(() => toast("Subject copied", "ok"));
 
   return (
-    <Section id="requests" title="Requests" sub="Every payment above an agent’s allowance waits here until the approver’s Gmail reply is verified onchain.">
+    <Section id="requests" title="Requests" sub="Payments above an agent’s allowance wait here for your reply.">
       <div className="grid gap-4 md:grid-cols-2">
-        {waiting.length === 0 && <div className="md:col-span-2"><Empty>Nothing is waiting for you. Large payments from agents show up here — and in your inbox.</Empty></div>}
+        {waiting.length === 0 && <div className="md:col-span-2"><Empty>Nothing is waiting for you.</Empty></div>}
         {waiting.map((i) => (
           <div key={String(i.id)} className="card">
             <div className="flex items-start justify-between gap-4">
@@ -114,7 +114,7 @@ export function Activity({ events, loading }: { events: FeedEvent[]; loading: bo
   const rows = useMemo(() => events.filter((e) => kind === "all" || e.kind === kind).slice().reverse(), [events, kind]);
   const kinds = useMemo(() => ["all", ...new Set(events.map((e) => e.kind))] as (FeedKind | "all")[], [events]);
   return (
-    <Section id="activity" title="Activity" sub="Merged vault events, newest first. Read straight from the contract’s own events — never from USDC transfer logs.">
+    <Section id="activity" title="Activity" sub="Vault events, newest first.">
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {kinds.map((k) => (
           <button key={k} onClick={() => setKind(k)} className={`tag rounded-full px-4 py-1.5 transition ${kind === k ? "bg-ink text-white" : "bg-card text-mute hover:text-ink"}`}>

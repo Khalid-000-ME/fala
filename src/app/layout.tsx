@@ -7,9 +7,9 @@ const sans = Geist({ subsets: ["latin"], weight: ["300", "400", "500"], variable
 const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["300", "400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Fala — your agent asks, you reply from Gmail",
+  title: "Fala",
   description:
-    "AI agents spend small amounts on their own. For anything bigger they email you — reply from Gmail and Arc verifies Google's signature before any USDC moves.",
+    "Your agent spends small amounts on its own. Anything bigger needs one reply from Gmail, verified on Arc.",
   icons: { icon: "/favicon.svg" },
 };
 

@@ -45,7 +45,7 @@ export function AddAgent({ vault, open, onClose, onDone }: { vault: VaultDto; op
       const a = await api<{ id: string; address: `0x${string}` }>(`/api/vaults/${vault.id}/agents`, { body });
       setBusy("Approve in your wallet to activate it…");
       const ok = await owner.write(vault.address, "setAgent", [a.address, parseUsdc(lim.per), parseUsdc(lim.daily), parseUsdc(lim.cap), true], "Activate agent");
-      if (!ok) { toast("The agent was created but isn't active yet — use “Activate” on it", "info"); }
+      if (!ok) { toast("Agent created but not active yet. Use Activate on it.", "info"); }
       onClose();
       onDone({ id: a.id, kind });
     } catch (e: any) { toast(e.message, "bad"); }
@@ -130,12 +130,12 @@ export function ConnectAgent({ agent, onClose, onDone }: { agent: AgentDto | nul
     <Modal open={!!agent} onClose={close} title={`Connect ${agent?.name ?? ""}`}>
       {!k ? (
         <div className="space-y-4">
-          <p className="cap">Create an API key for this agent. It lets Claude, Cursor or any HTTP client ask the vault for payments as this agent — within the limits you set. You can revoke it any time.</p>
+          <p className="cap">Lets Claude, Cursor or any HTTP client spend as this agent, within its limits. Revoke it any time.</p>
           <button className="btn w-full" disabled={busy} onClick={make}>{busy ? "Creating…" : "Create API key"}</button>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl bg-[#fff4de] px-4 py-3 text-[13px] text-warn">Copy your key now — it's shown only once.</div>
+          <div className="rounded-2xl bg-[#fff4de] px-4 py-3 text-[13px] text-warn">Copy it now. It is shown only once.</div>
           <Code>{k.key}</Code>
           <div className="flex gap-2">
             {(["claude", "cursor", "http"] as const).map((t) => (
@@ -144,7 +144,7 @@ export function ConnectAgent({ agent, onClose, onDone }: { agent: AgentDto | nul
           </div>
           {tab === "claude" && <><div className="cap">Claude Code</div><Code>{k.claudeCode}</Code><div className="cap">Claude Desktop (claude_desktop_config.json)</div><Code>{desktop!}</Code></>}
           {tab === "cursor" && <><div className="cap">Cursor (~/.cursor/mcp.json)</div><Code>{cursor!}</Code></>}
-          {tab === "http" && <><div className="cap">REST — GET /allowance, POST /payments, GET /payments/:id</div><Code>{curl!}</Code></>}
+          {tab === "http" && <><div className="cap">REST: GET /allowance, POST /payments, GET /payments/:id</div><Code>{curl!}</Code></>}
           <p className="cap">Tools your agent gets: get_allowance, request_payment, payment_status.</p>
         </div>
       )}

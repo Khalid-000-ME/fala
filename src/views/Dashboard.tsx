@@ -24,11 +24,11 @@ export default function Dashboard() {
   useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); /* eslint-disable-next-line */ }, []);
 
   return (
-    <main>
+    <main className="pt-24">
       <Section
         id="vaults"
         title="My vaults"
-        sub={<>Each vault holds USDC for your agents, owned by your wallet{address && <> <a className="underline underline-offset-4" target="_blank" rel="noreferrer" href={explorerAddr(address)}>{short(address)}</a></>}. Approval emails go to the Gmail you choose for that vault.</>}
+        sub={<>Owned by your wallet{address && <> <a className="underline underline-offset-4" target="_blank" rel="noreferrer" href={explorerAddr(address)}>{short(address)}</a></>}.</>}
         aside={<button className="btn" onClick={() => setOpen(true)}>New vault [ + ]</button>}
       >
         {vaults === null ? <Empty>Loading your vaults…</Empty> : vaults.length === 0 ? (
@@ -89,7 +89,7 @@ function NewVault({ open, onClose, onDone }: { open: boolean; onClose: () => voi
         <Field label="Vault name"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Procurement" /></Field>
         <Field label="Send approval emails to (Gmail)"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="approver@gmail.com" /></Field>
         <Field label="Minimum balance · USDC"><input className="input" inputMode="decimal" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} /></Field>
-        <p className="cap">Replies from that Gmail are the only thing that can approve big payments, so use an address you control. We'll email you when the vault drops below the minimum. Tip: use a dedicated Gmail — the email headers are public onchain.</p>
+        <p className="cap">Use a dedicated Gmail you control. Its replies are the only way to approve big payments, and the headers are public onchain.</p>
         {err && <div className="cap text-bad">{err}</div>}
         <button className="btn w-full" disabled={!!err || busy} onClick={create}>{busy ? "Deploying your vault on Arc… (about 10 seconds)" : "Create vault"}</button>
       </div>
