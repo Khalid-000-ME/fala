@@ -10,6 +10,7 @@ import { useVaultLogs } from "../hooks/useVaultData";
 import { useTx } from "../hooks/useTx";
 import { Empty, Section, Stat } from "../components/ui";
 import { AgentKindIcon, Usdc } from "../components/Icons";
+import { LogoLoader } from "../components/LogoLoader";
 import { AppShell } from "../components/AppShell";
 import { Activity, Requests } from "../components/Requests";
 import { AddAgent, ConnectAgent, EditLimits } from "../components/AgentModals";
@@ -48,7 +49,7 @@ export default function VaultPage({ id }: { id: string }) {
   const known = useMemo(() => Object.entries(logs.payees).filter(([, k]) => k).map(([a]) => a), [logs.payees]);
 
   if (missing) return <AppShell><Empty>Vault not found. <Link className="underline" href="/app">Back to vaults</Link></Empty></AppShell>;
-  if (!v) return <AppShell><Empty>Loading…</Empty></AppShell>;
+  if (!v) return <LogoLoader />;
 
   const isOwner = !!owner.address && owner.address.toLowerCase() === v.ownerAddress.toLowerCase();
   const pending = logs.intents.filter((i) => i.status === "PENDING" && i.expiresAt > Date.now() / 1000).length;

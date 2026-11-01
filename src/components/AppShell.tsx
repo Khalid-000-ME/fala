@@ -27,6 +27,25 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
   const { user, logout } = useAuth();
   const router = useRouter();
   const addr = user?.wallet?.address;
+  const account = (
+    <>
+      <NetworkBadge />
+      {addr && <span className="cap">{short(addr)}</span>}
+      <ThemeToggle />
+      <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>Sign out</button>
+    </>
+  );
+  if (!items) {
+    return (
+      <div className="min-h-screen">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-5 py-4 sm:px-10">
+          <Link href="/app" aria-label="Fala home"><Logo /></Link>
+          <div className="flex flex-wrap items-center gap-5">{account}</div>
+        </header>
+        <main className="px-5 py-8 sm:px-10 sm:py-12"><div className="mx-auto max-w-[960px]">{children}</div></main>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen md:grid md:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-6 border-b border-line p-5 md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r">
@@ -47,10 +66,7 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
           </nav>
         )}
         <div className="mt-auto hidden flex-col items-start gap-3 md:flex">
-          <NetworkBadge />
-          {addr && <span className="cap">{short(addr)}</span>}
-          <ThemeToggle />
-          <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>Sign out</button>
+          {account}
         </div>
       </aside>
       <main className="min-w-0 px-5 py-8 sm:px-10 sm:py-12"><div className="mx-auto max-w-[960px]">{children}</div></main>

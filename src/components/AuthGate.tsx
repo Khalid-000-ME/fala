@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { LogoLoader } from "./LogoLoader";
 import { stallHint, useAuth } from "../hooks/useAuth";
 
 /** Keeps signed-out visitors out of the app pages without flashing their contents. */
@@ -21,7 +22,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       </main>
     );
   }
-  if (!ready) return <main className="wrap cap py-32">Loading…</main>;
-  if (!authenticated) return <main className="wrap cap py-32">Redirecting to sign in…</main>;
+  if (!ready) return <LogoLoader />;
+  if (!authenticated) return <LogoLoader />;
   return <>{children}</>;
 }

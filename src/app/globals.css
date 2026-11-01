@@ -55,3 +55,6 @@ body {
 .rise { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
 .pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+@keyframes logo-dot { 0%, 100% { opacity: .2; transform: scale(.75); } 40% { opacity: 1; transform: scale(1.1); } }
+.logo-dot { animation: logo-dot 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .logo-dot { animation-duration: 3s; } }
