@@ -22,18 +22,19 @@ export default function Landing() {
     <main>
       <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden">
         <div className="absolute inset-0" aria-hidden>
+          {/* colors run dark to bright: the dark end is the shadow and stays transparent. */}
           <GradientASCII
             lightMode
-            colors={["#e8527a", "#7a5cff", "#1e3fd8", "#0a0a0a"]}
+            colors={["#1e3fd8", "#7a5cff", "#e8527a", "#ffe3ee"]}
             shape="horizon"
-            cellSize={14}
-            glyphOpacity={1}
-            gradientOpacity={1}
-            speed={0.7}
-            grain={0.06}
+            cellSize={18}
+            density={0.8}
+            glyphOpacity={0.85}
+            gradientOpacity={0.9}
+            speed={0.6}
           />
           {/* A soft pool of white behind the words only, so the art still reads at the edges. */}
-          <div className="absolute inset-0 [background:radial-gradient(ellipse_52%_46%_at_50%_50%,rgba(255,255,255,.92)_0%,rgba(255,255,255,.72)_45%,rgba(255,255,255,0)_100%)]" />
+          <div className="absolute inset-0 [background:radial-gradient(ellipse_52%_46%_at_50%_50%,rgba(255,255,255,.88)_0%,rgba(255,255,255,.55)_45%,rgba(255,255,255,0)_100%)]" />
         </div>
         <div className="rise wrap relative z-10 flex flex-col items-center text-center">
           <div className="cap mb-6">Spending vaults for AI agents on Arc</div>
