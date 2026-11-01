@@ -17,7 +17,7 @@ const PRIVY_CHAIN = addRpcUrlOverrideToChain(ACTIVE, ACTIVE.rpcUrls.default.http
 export default function ProviderTree({ children }: { children: React.ReactNode }) {
   const [qc] = useState(() => new QueryClient());
   if (!appId) {
-    return <main className="wrap py-24 font-mono text-[13px]">Set NEXT_PUBLIC_PRIVY_APP_ID in .env.local to enable sign-in.</main>;
+    return <main className="wrap py-24 text-[13px]">Set NEXT_PUBLIC_PRIVY_APP_ID in .env.local to enable sign-in.</main>;
   }
   return (
     <PrivyProvider

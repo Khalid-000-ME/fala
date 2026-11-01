@@ -124,7 +124,7 @@ const Code = ({ children }: { children: string }) => {
   return (
     <div className="relative">
       <pre className="overflow-x-auto rounded-2xl border border-line bg-canvas p-4 pr-16 font-mono text-[12px] leading-relaxed text-ink/90">{children}</pre>
-      <button className="absolute right-3 top-3 font-mono text-[11px] text-mute hover:text-ink" onClick={() => navigator.clipboard?.writeText(children).then(() => toast("Copied", "ok"))}>[ copy ]</button>
+      <button className="absolute right-3 top-3 text-[11px] text-mute hover:text-ink" onClick={() => navigator.clipboard?.writeText(children).then(() => toast("Copied", "ok"))}>[ copy ]</button>
     </div>
   );
 };

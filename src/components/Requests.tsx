@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { explorerTx, VAULT } from "../config/chain";
-import { ago, countdown, fmtUsdc, short } from "../lib/format";
+import { ago, countdown, fmtUsdc } from "../lib/format";
 import { REJECTION, type FeedEvent, type FeedKind, type IntentRow } from "../lib/types";
-import { Usdc } from "./Icons";
+import { Hash, Usdc } from "./Icons";
 import { Empty, Section } from "./ui";
 import { useTx } from "../hooks/useTx";
 import { useOwnerWallet } from "../lib/owner";
@@ -43,12 +43,12 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="cap">Request #{String(i.id)}</div>
-                <div className="cap mt-1">{short(i.agent)} → {short(i.payee)}</div>
+                <div className="cap mt-1"><Hash value={i.agent} /> → <Hash value={i.payee} /></div>
                 <div className="mt-2 text-[40px] leading-none tracking-tightest"><Usdc value={fmtUsdc(i.amount)} size={24} /></div>
               </div>
               <span className="tag rounded-full bg-canvas px-3 py-1 text-warn">{countdown(i.expiresAt - now)}</span>
             </div>
-            <p className="mt-4 break-words font-mono text-[13px]">“{i.memo || "no memo"}”</p>
+            <p className="mt-4 break-words text-[14px]">“{i.memo || "no memo"}”</p>
             <div className="mt-4 rounded-2xl bg-canvas px-4 py-3">
               <div className="cap">Reply with this exact subject</div>
               <button className="mt-1 break-all text-left font-mono text-[13.5px] hover:text-accent" onClick={() => copy(subjectOf("APPROVE", i))} title="Copy">{subjectOf("APPROVE", i)}</button>
@@ -78,7 +78,7 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
                 <span className="cap">#{String(i.id)}</span>
                 <span className={`tag w-fit rounded-full px-3 py-1 ${chip.cls}`}>{chip.label}</span>
                 <span className="order-3 col-span-2 min-w-0 md:order-none md:col-span-1">
-                  <span className="block truncate text-[17px]">{short(i.agent)} → {short(i.payee)}</span>
+                  <span className="block truncate text-[17px]"><Hash value={i.agent} /> → <Hash value={i.payee} /></span>
                   <span className="cap block truncate">
                     “{i.memo}”
                     
@@ -129,17 +129,17 @@ export function Activity({ events, loading }: { events: FeedEvent[]; loading: bo
           {rows.slice(0, 80).map((e) => {
             const k = KIND[e.kind];
             return (
-              <a key={e.id} href={explorerTx(e.tx)} target="_blank" rel="noreferrer" className="row group grid-cols-[1fr_auto] gap-y-1 transition hover:bg-card/60 md:grid-cols-[9.5rem_minmax(0,1fr)_8rem_6rem]">
+              <div key={e.id} className="row group grid-cols-[1fr_auto] gap-y-1 transition hover:bg-card/60 md:grid-cols-[9.5rem_minmax(0,1fr)_8rem_6rem]">
                 <span className={`tag flex items-center gap-2 ${k.text}`}><i className={`h-2 w-2 rounded-full ${k.dot}`} />{k.label}</span>
                 <span className="order-3 col-span-2 min-w-0 md:order-none md:col-span-1">
                   <span className="block truncate text-[17px]">
-                    {e.kind === "rejected" ? REJECTION[e.reason ?? 0] : e.agent ? `${short(e.agent)} → ${short(e.payee)}` : e.intentId ? `Request #${e.intentId}` : e.kind === "frozen" ? "Approver emailed FREEZE" : ""}
+                    {e.kind === "rejected" ? REJECTION[e.reason ?? 0] : e.agent ? <><Hash value={e.agent} /> → <Hash value={e.payee} /></> : e.intentId ? `Request #${e.intentId}` : e.kind === "frozen" ? "Approver emailed FREEZE" : ""}
                   </span>
                   {e.memo && <span className="cap block truncate">“{e.memo}”</span>}
                 </span>
                 <span className="text-right text-[17px] md:text-left">{e.amount !== undefined && <Usdc value={fmtUsdc(e.amount)} size={14} />}</span>
-                <span className="cap text-right group-hover:text-accent">{ago(e.ts, now)}</span>
-              </a>
+                <a className="cap text-right hover:text-accent" href={explorerTx(e.tx)} target="_blank" rel="noreferrer">{ago(e.ts, now)} ↗</a>
+              </div>
             );
           })}
         </div>

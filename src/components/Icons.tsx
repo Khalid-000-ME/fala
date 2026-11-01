@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { explorerAddr } from "../config/chain";
+import { short } from "../lib/format";
 import { FcGoogle } from "react-icons/fc";
 import { PiPlugsConnected, PiSparkle, PiTerminalWindow } from "react-icons/pi";
 import { SiClaude, SiCursor } from "react-icons/si";
@@ -21,7 +23,11 @@ export const AgentKindIcon = ({ kind, provider, size = 18 }: { kind: string; pro
 /** An amount with its ticker beside it. */
 export const Usdc = ({ value, className = "" }: { value: ReactNode; size?: number; className?: string }) => (
   <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
-    {value}
+    <span className="font-mono tracking-tight">{value}</span>
     <span className="text-[max(12px,.4em)] tracking-normal text-mute">USDC</span>
   </span>
 );
+
+/** An address, always in mono and always linking to the explorer. */
+export const Hash = ({ value, full, chars }: { value?: string; full?: boolean; chars?: number }) =>
+  value ? <a href={explorerAddr(value)} target="_blank" rel="noreferrer" className="break-all font-mono underline decoration-line underline-offset-4 transition hover:text-accent">{full ? value : short(value, chars)}</a> : null;

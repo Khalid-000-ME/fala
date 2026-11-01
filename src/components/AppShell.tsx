@@ -5,8 +5,8 @@ import { PiArrowLeft } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
+import { Hash } from "./Icons";
 
 export type NavItem = { id: string; label: string; badge?: number };
 
@@ -31,7 +31,7 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
   const account = (
     <>
       <NetworkBadge />
-      {addr && <span className="cap">{short(addr)}</span>}
+      {addr && <span className="cap"><Hash value={addr} /></span>}
       <ThemeToggle />
       <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>Sign out</button>
     </>

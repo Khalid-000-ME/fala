@@ -14,12 +14,12 @@ export function Section({ id, title, children, aside }: { id?: string; title: Re
   );
 }
 
-export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: string; tone?: "bad" | "ok" }) {
+export function Stat({ label, value, hint, tone }: { label: ReactNode; value: ReactNode; hint?: string; tone?: "bad" | "ok" }) {
   return (
     <div className="card flex min-h-[120px] flex-col justify-between">
       <div className="cap">{label}</div>
       <div>
-        <div className={`text-[36px] leading-none tracking-tightest ${tone === "bad" ? "text-bad" : tone === "ok" ? "text-ok" : ""}`}>{value}</div>
+        <div className={`font-mono text-[32px] leading-none tracking-tight ${tone === "bad" ? "text-bad" : tone === "ok" ? "text-ok" : ""}`}>{value}</div>
         {hint && <div className="cap mt-2">{hint}</div>}
       </div>
     </div>

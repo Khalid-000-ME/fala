@@ -9,13 +9,12 @@ import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useVaultLogs } from "../hooks/useVaultData";
 import { useTx } from "../hooks/useTx";
 import { Empty, Section, Stat } from "../components/ui";
-import { AgentKindIcon, Usdc } from "../components/Icons";
+import { AgentKindIcon, Hash, Usdc } from "../components/Icons";
 import { LogoLoader } from "../components/LogoLoader";
 import { AppShell } from "../components/AppShell";
 import { Activity, Requests } from "../components/Requests";
 import { AddAgent, ConnectAgent, EditLimits } from "../components/AgentModals";
-import { explorerAddr } from "../config/chain";
-import { parseUsdc, short } from "../lib/format";
+import { parseUsdc } from "../lib/format";
 
 const KIND_LABEL = { managed: "Fala agent", connected: "Connected", byo: "Own agent" } as const;
 
@@ -182,7 +181,7 @@ function Settings({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDon
       </div>
       <div className="card lg:col-span-2">
         <div className="cap">Vault address</div>
-        <a className="mt-3 block break-all font-mono text-[13px] underline underline-offset-4" target="_blank" rel="noreferrer" href={explorerAddr(v.address)}>{v.address}</a>
+        <div className="mt-3 text-[13px]"><Hash value={v.address} full /></div>
       </div>
     </div>
   );
@@ -213,7 +212,7 @@ function AgentRow({ a, i, v, isOwner, onEdit, onConnect, onChanged }: { a: Agent
           <div className="cap mt-2 flex flex-wrap items-center gap-2">
             <span className={`tag rounded-full px-2.5 py-0.5 ${a.registered ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"}`}>{a.registered ? "Active" : "Not active"}</span>
             <span>{KIND_LABEL[a.kind]}</span>
-            <span>{short(a.address, 6)}</span>
+            <Hash value={a.address} chars={6} />
           </div>
         </div>
         <div>
@@ -231,7 +230,7 @@ function AgentRow({ a, i, v, isOwner, onEdit, onConnect, onChanged }: { a: Agent
         <div className="mt-4 rounded-2xl bg-card p-4 lg:ml-[3.5rem]">
           <div className="cap">Give the Fala agent a task</div>
           <div className="mt-2 flex gap-3"><input className="input !bg-canvas" value={task} onChange={(e) => setTask(e.target.value)} placeholder="Buy the $0.10 weather dataset from 0x… then the $2 annual plan" /><button className="btn shrink-0" disabled={busy || task.length < 3 || !a.registered} onClick={runTask}>{busy ? "Working…" : "Run"}</button></div>
-          {run && <div className="mt-3 font-mono text-[12.5px]"><div className="text-mute">{run.steps.map((s) => s.tool).join(" → ")}</div><div className="mt-1 whitespace-pre-wrap">{run.answer}</div></div>}
+          {run && <div className="mt-3 text-[13px]"><div className="text-mute">{run.steps.map((s) => s.tool).join(" → ")}</div><div className="mt-1 whitespace-pre-wrap">{run.answer}</div></div>}
         </div>
       )}
     </div>
@@ -246,7 +245,7 @@ function Payees({ v, known, isOwner }: { v: VaultDto; known: string[]; isOwner: 
       <div className="cap">Paid instantly within an agent's allowance</div>
       <ul className="mt-4 space-y-2">
         {known.length ? known.map((a) => (
-          <li key={a} className="flex items-center justify-between gap-3 font-mono text-[13px]"><span>{a}</span><button className="cap hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={() => owner.write(v.address, "setPayee", [a as Address, false], "Remove payee")}>Remove</button></li>
+          <li key={a} className="flex items-center justify-between gap-3 text-[13px]"><Hash value={a} full /><button className="cap hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={() => owner.write(v.address, "setPayee", [a as Address, false], "Remove payee")}>Remove</button></li>
         )) : <li className="cap">None yet.</li>}
       </ul>
       <div className="mt-4 flex gap-3"><input className="input" placeholder="0x… payee address" value={p} onChange={(e) => setP(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !isAddress(p)} onClick={async () => (await owner.write(v.address, "setPayee", [p as Address, true], "Add payee")) && setP("")}>Add</button></div>

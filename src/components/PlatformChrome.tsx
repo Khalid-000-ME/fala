@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { stallHint, useAuth } from "../hooks/useAuth";
-import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
 import { GoogleIcon } from "./Icons";
 
@@ -23,12 +22,10 @@ function useNavScroll() {
 }
 
 export function PlatformHeader() {
-  const { ready, stalled, authenticated, user, login, logout } = useAuth();
+  const { ready, stalled, authenticated, login, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { shown, wide } = useNavScroll();
-  // Show the wallet, never the Google address: the header is on screen in demos and screenshots.
-  const addr = user?.wallet?.address;
 
   if (pathname !== "/") return null;
   return (
@@ -52,8 +49,8 @@ export function PlatformHeader() {
         <div className="flex items-center gap-3">
           <NetworkBadge />
           {ready && authenticated ? (
-            <button className="btn-ghost btn btn-sm font-mono" title="Sign out" onClick={async () => { await logout(); router.push("/"); }}>
-              {addr ? short(addr) : "Account"}
+            <button className="btn-ghost btn btn-sm" title="Sign out" onClick={async () => { await logout(); router.push("/"); }}>
+              Sign out
             </button>
           ) : ready ? (
             <button className="btn btn-sm" onClick={() => login()}><GoogleIcon size={15} />Sign in</button>
@@ -74,7 +71,7 @@ export function PlatformFooter() {
     <footer className="bg-black pb-12 pt-20 text-white">
       <div className="wrap flex flex-wrap items-center justify-between gap-6">
         <Logo light />
-        <div className="font-mono text-[13px] text-white/50">Unaudited. Built on Arc.</div>
+        <div className="text-[13px] text-white/50">Unaudited. Built on Arc.</div>
       </div>
     </footer>
   );

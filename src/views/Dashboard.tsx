@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 import { useApi, type VaultDto } from "../lib/api";
 import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useOwnerWallet } from "../lib/owner";
-import { short } from "../lib/format";
 import { Empty, Field, Modal, Section, Stat } from "../components/ui";
 import { AppShell } from "../components/AppShell";
-import { Usdc } from "../components/Icons";
+import { Hash, Usdc } from "../components/Icons";
 import { LogoLoader } from "../components/LogoLoader";
 import { useTx } from "../hooks/useTx";
 
@@ -33,7 +32,7 @@ export default function Dashboard() {
         title="Vaults"
         aside={<button className="btn" onClick={() => setOpen(true)}>New vault</button>}
       >
-        <div className="mb-4"><Stat label={`Wallet ${short(address)}`} value={<Usdc value={wallet ?? "…"} size={22} />} /></div>
+        <div className="mb-4"><Stat label={<>Wallet <Hash value={address} /></>} value={<Usdc value={wallet ?? "…"} size={22} />} /></div>
         {vaults === null ? <LogoLoader /> : vaults.length === 0 ? (
           <div className="card flex flex-col items-start gap-4 py-12">
             <div className="text-[28px] tracking-tightest">Create your first vault</div>
