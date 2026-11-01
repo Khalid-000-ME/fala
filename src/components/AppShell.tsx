@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PiArrowLeft } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -53,7 +54,7 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
           <Link href="/app" aria-label="Fala home"><Logo /></Link>
           <span className="md:hidden"><NetworkBadge /></span>
         </div>
-        {back && <Link href="/app" className="cap hover:text-ink">← Vaults</Link>}
+        {back && <Link href="/app" className="flex w-fit items-center gap-1.5 text-[14px] text-mute transition hover:text-ink"><PiArrowLeft size={16} aria-hidden />Vaults</Link>}
         {title && <div className="truncate text-[20px] tracking-tightest">{title}</div>}
         {items && (
           <nav className="-mx-1 flex gap-1 overflow-x-auto md:flex-col">
