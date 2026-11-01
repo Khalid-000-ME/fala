@@ -16,7 +16,7 @@ export const Logo = ({ light }: { light?: boolean }) => (
 
 export function NetworkBadge() {
   const tone =
-    NETWORK === "mainnet" ? "bg-bad text-white" : NETWORK === "testnet" ? "bg-card text-mute" : "bg-ink text-white";
+    NETWORK === "mainnet" ? "bg-bad text-white" : NETWORK === "testnet" ? "bg-card text-mute" : "bg-ink text-canvas";
   return <span className={`tag rounded-full px-3 py-1 uppercase ${tone}`}>{DEMO ? "demo" : NETWORK}</span>;
 }
 
@@ -25,16 +25,16 @@ export function Toasts() {
   return (
     <div className="fixed bottom-5 right-5 z-[60] flex w-[min(92vw,360px)] flex-col gap-2">
       {toasts.map((t) => (
-        <div key={t.id} className="rise flex items-start justify-between gap-4 rounded-2xl bg-ink px-5 py-4 text-white shadow-xl">
+        <div key={t.id} className="rise flex items-start justify-between gap-4 rounded-2xl border border-line bg-card px-5 py-4 text-ink shadow-xl">
           <div>
-            <div className={`font-mono text-[13px] ${t.tone === "bad" ? "text-[#ff8a7f]" : t.tone === "ok" ? "text-[#6fe3a1]" : ""}`}>{t.msg}</div>
+            <div className={`font-mono text-[13px] ${t.tone === "bad" ? "text-bad" : t.tone === "ok" ? "text-ok" : ""}`}>{t.msg}</div>
             {t.tx && (
               <a className="font-mono text-[12px] text-accent underline-offset-2 hover:underline" target="_blank" rel="noreferrer" href={`${ACTIVE.blockExplorers?.default.url ?? ""}/tx/${t.tx}`}>
                 View on explorer [ + ]
               </a>
             )}
           </div>
-          <button className="font-mono text-white/50 hover:text-white" onClick={() => dismiss(t.id)}>×</button>
+          <button className="font-mono text-mute hover:text-ink" onClick={() => dismiss(t.id)}>×</button>
         </div>
       ))}
     </div>

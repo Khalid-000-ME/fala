@@ -37,7 +37,7 @@ export default function Landing() {
           <h1 className="h-display max-w-4xl text-white">Let your agents spend. Approve from your inbox.</h1>
           <p className="lede mt-7 !text-white/70">Your agent pays small amounts on its own. Anything bigger needs one reply from Gmail.</p>
           <div className="mt-9">
-            <button className="btn !bg-white !text-ink" disabled={!ready} onClick={() => login()}>
+            <button className="btn !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>
               {ready ? "Sign in with Google" : "Loading"}
             </button>
           </div>

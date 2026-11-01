@@ -104,8 +104,8 @@ const Code = ({ children }: { children: string }) => {
   const { toast } = useTx();
   return (
     <div className="relative">
-      <pre className="overflow-x-auto rounded-2xl bg-ink p-4 pr-16 font-mono text-[12px] leading-relaxed text-white/90">{children}</pre>
-      <button className="absolute right-3 top-3 font-mono text-[11px] text-white/60 hover:text-white" onClick={() => navigator.clipboard?.writeText(children).then(() => toast("Copied", "ok"))}>[ copy ]</button>
+      <pre className="overflow-x-auto rounded-2xl border border-line bg-canvas p-4 pr-16 font-mono text-[12px] leading-relaxed text-ink/90">{children}</pre>
+      <button className="absolute right-3 top-3 font-mono text-[11px] text-mute hover:text-ink" onClick={() => navigator.clipboard?.writeText(children).then(() => toast("Copied", "ok"))}>[ copy ]</button>
     </div>
   );
 };
@@ -135,11 +135,11 @@ export function ConnectAgent({ agent, onClose, onDone }: { agent: AgentDto | nul
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-2xl bg-[#fff4de] px-4 py-3 text-[13px] text-warn">Copy it now. It is shown only once.</div>
+          <div className="rounded-2xl bg-warn/15 px-4 py-3 text-[13px] text-warn">Copy it now. It is shown only once.</div>
           <Code>{k.key}</Code>
           <div className="flex gap-2">
             {(["claude", "cursor", "http"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} className={`tag rounded-full px-4 py-1.5 ${tab === t ? "bg-ink text-white" : "bg-card text-mute"}`}>{t === "claude" ? "Claude" : t === "cursor" ? "Cursor" : "HTTP"}</button>
+              <button key={t} onClick={() => setTab(t)} className={`tag rounded-full px-4 py-1.5 ${tab === t ? "bg-ink text-canvas" : "bg-card text-mute"}`}>{t === "claude" ? "Claude" : t === "cursor" ? "Cursor" : "HTTP"}</button>
             ))}
           </div>
           {tab === "claude" && <><div className="cap">Claude Code</div><Code>{k.claudeCode}</Code><div className="cap">Claude Desktop (claude_desktop_config.json)</div><Code>{desktop!}</Code></>}

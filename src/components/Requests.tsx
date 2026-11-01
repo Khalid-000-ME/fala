@@ -12,12 +12,12 @@ import { useNow } from "../hooks/useVaultData";
 const ENV_INBOUND = process.env.NEXT_PUBLIC_INBOUND_ADDRESS as string | undefined;
 
 const CHIP: Record<string, { label: string; cls: string }> = {
-  PENDING: { label: "Pending", cls: "bg-[#fff4de] text-warn" },
-  APPROVED: { label: "Approved by email", cls: "bg-[#e3f1ff] text-info" },
+  PENDING: { label: "Pending", cls: "bg-warn/15 text-warn" },
+  APPROVED: { label: "Approved by email", cls: "bg-info/15 text-info" },
   DENIED: { label: "Denied", cls: "bg-card text-mute" },
   EXPIRED: { label: "Expired", cls: "bg-card text-mute" },
   CANCELLED: { label: "Cancelled", cls: "bg-card text-mute" },
-  FAILED: { label: "Failed", cls: "bg-[#fde8e6] text-bad" },
+  FAILED: { label: "Failed", cls: "bg-bad/15 text-bad" },
 };
 
 const subjectOf = (verb: "APPROVE" | "DENY", i: IntentRow) => `FALA ${verb} ${i.id} ${i.code}`;
@@ -34,7 +34,7 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
   const copy = (s: string) => navigator.clipboard?.writeText(s).then(() => toast("Subject copied", "ok"));
 
   return (
-    <Section id="requests" title="Requests" sub="Payments above an agent’s allowance wait here for your reply.">
+    <Section id="requests" title="Requests">
       <div className="grid gap-4 md:grid-cols-2">
         {waiting.length === 0 && <div className="md:col-span-2"><Empty>Nothing is waiting for you.</Empty></div>}
         {waiting.map((i) => (
@@ -44,10 +44,10 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
                 <div className="cap">#{String(i.id)} · {short(i.agent)} → {short(i.payee)}</div>
                 <div className="mt-2 text-[40px] leading-none tracking-tightest">{fmtUsdc(i.amount)} <span className="text-[18px] text-mute">USDC</span></div>
               </div>
-              <span className="tag rounded-full bg-white px-3 py-1 text-warn">{countdown(i.expiresAt - now)}</span>
+              <span className="tag rounded-full bg-canvas px-3 py-1 text-warn">{countdown(i.expiresAt - now)}</span>
             </div>
             <p className="mt-4 break-words font-mono text-[13px]">“{i.memo || "no memo"}”</p>
-            <div className="mt-4 rounded-2xl bg-white px-4 py-3">
+            <div className="mt-4 rounded-2xl bg-canvas px-4 py-3">
               <div className="cap">Reply with this exact subject</div>
               <button className="mt-1 break-all text-left font-mono text-[13.5px] hover:text-accent" onClick={() => copy(subjectOf("APPROVE", i))} title="Copy">{subjectOf("APPROVE", i)}</button>
             </div>
@@ -55,7 +55,7 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
               {INBOUND ? (
                 <>
                   <a className="btn btn-sm" href={mailto(INBOUND!, subjectOf("APPROVE", i))}>✅ Approve</a>
-                  <a className="btn-ghost btn btn-sm bg-white" href={mailto(INBOUND!, subjectOf("DENY", i))}>❌ Deny</a>
+                  <a className="btn-ghost btn btn-sm" href={mailto(INBOUND!, subjectOf("DENY", i))}>❌ Deny</a>
                 </>
               ) : (
                 <span className="cap">Check your inbox for the Approve / Deny buttons.</span>
@@ -114,10 +114,10 @@ export function Activity({ events, loading }: { events: FeedEvent[]; loading: bo
   const rows = useMemo(() => events.filter((e) => kind === "all" || e.kind === kind).slice().reverse(), [events, kind]);
   const kinds = useMemo(() => ["all", ...new Set(events.map((e) => e.kind))] as (FeedKind | "all")[], [events]);
   return (
-    <Section id="activity" title="Activity" sub="Vault events, newest first.">
+    <Section id="activity" title="Activity">
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {kinds.map((k) => (
-          <button key={k} onClick={() => setKind(k)} className={`tag rounded-full px-4 py-1.5 transition ${kind === k ? "bg-ink text-white" : "bg-card text-mute hover:text-ink"}`}>
+          <button key={k} onClick={() => setKind(k)} className={`tag rounded-full px-4 py-1.5 transition ${kind === k ? "bg-ink text-canvas" : "bg-card text-mute hover:text-ink"}`}>
             {k === "all" ? "All" : KIND[k].label}
           </button>
         ))}

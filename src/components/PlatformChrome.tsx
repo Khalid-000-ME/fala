@@ -29,20 +29,21 @@ export function PlatformHeader() {
   // Show the wallet, never the Google address: the header is on screen in demos and screenshots.
   const addr = user?.wallet?.address;
 
+  if (pathname !== "/") return null;
   return (
     <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-3">
       <div
         style={{ maxWidth: wide ? "1100px" : "400px" }}
         className={`flex h-14 w-full items-center justify-between gap-4 rounded-2xl border px-5 backdrop-blur-xl transition-all duration-500 ease-out ${
           shown
-            ? "border-white/40 bg-white/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.06)]"
+            ? "border-line/60 bg-canvas/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.25)]"
             : "pointer-events-none border-transparent bg-transparent opacity-0"
         }`}
       >
         <Link href={authenticated ? "/app" : "/"} aria-label="Fala home"><Logo /></Link>
         {authenticated && (
           <nav className={`hidden ${wide ? "md:flex" : ""}`}>
-            <Link href="/app" className={`text-[14.5px] transition ${pathname === "/app" ? "text-ink" : "text-mute hover:text-ink"}`}>
+            <Link href="/app" className="text-[14.5px] text-mute transition hover:text-ink">
               Vaults
             </Link>
           </nav>
@@ -67,6 +68,7 @@ export function PlatformHeader() {
 }
 
 export function PlatformFooter() {
+  if (usePathname() !== "/") return null;
   return (
     <footer className="bg-black pb-12 pt-20 text-white">
       <div className="wrap flex flex-wrap items-center justify-between gap-6">
