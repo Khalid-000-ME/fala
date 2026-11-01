@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-const RAMP = ".,-~:;=!*#%@";
+const RAMP = " .:-=+*#%@";
 type Point = [number, number, number, number, number, number, number];
-export type ShapeName = "coin" | "envelope" | "lock" | "plane";
+export type ShapeName = "clock" | "coin" | "envelope" | "lock" | "plane";
 
 const near = (a: number, b: number, w: number) => Math.abs(a - b) < w;
 function inPoly(x: number, y: number, p: number[][]) {
@@ -18,6 +18,13 @@ const PLANE = [[1, 0.75], [-1, 0.1], [-0.4, -0.12], [-0.15, -0.75], [0.1, -0.3]]
 
 /** Each shape is a flat silhouette in -1..1, with gaps cut out for its details. */
 const MASK: Record<ShapeName, (x: number, y: number) => boolean> = {
+  clock: (x, y) => {
+    const r = Math.hypot(x, y);
+    if (r > 0.98 || near(r, 0.84, 0.035)) return false;
+    const hour = near(x, 0, 0.05) && y > -0.04 && y < 0.5;
+    const minute = near(y, 0, 0.05) && x > -0.04 && x < 0.65;
+    return !(hour || minute);
+  },
   coin: (x, y) => {
     const r = Math.hypot(x, y);
     if (r > 0.98 || near(r, 0.8, 0.035)) return false;
@@ -33,11 +40,11 @@ const MASK: Record<ShapeName, (x: number, y: number) => boolean> = {
   plane: (x, y) => inPoly(x, y, PLANE) && !near(y - 0.75, ((x - 1) * 0.87) / 1.4, 0.03),
 };
 
-function points(shape: ShapeName, t: number): Point[] {
+function points(shape: ShapeName, t: number, step: number): Point[] {
   const out: Point[] = [];
-  for (let x = -1; x <= 1; x += 0.022) for (let y = -1; y <= 1; y += 0.03) {
+  for (let x = -1; x <= 1; x += step) for (let y = -1; y <= 1; y += step * 1.5) {
     if (!MASK[shape](x, y)) continue;
-    const gloss = 0.25 * Math.sin(2.5 * x + 1.5 * y + t * 2.5);
+    const gloss = 0.3 * Math.sin(2.5 * x + 1.5 * y + t * 2.5);
     out.push([x, y, -0.1, 0, 0, -1, gloss], [x, y, 0.1, 0, 0, 1, gloss]);
   }
   return out;
@@ -56,7 +63,7 @@ export function AsciiShape({ shape, cols = 52, rows = 26, speed = 1, className =
       const chars = new Array(cols * rows).fill(" ");
       const depth = new Float32Array(cols * rows);
       const k = Math.min(cols, rows * 2) * 1.7;
-      for (const [x, y, z, nx, ny, nz, gloss] of points(shape, t)) {
+      for (const [x, y, z, nx, ny, nz, gloss] of points(shape, t, Math.min(0.022, 2 / k))) {
         const rot = (a: number, b: number, c: number) => { const y1 = b * ca - c * sa, z1 = b * sa + c * ca; return [a * cb + z1 * sb, y1, z1 * cb - a * sb]; };
         const [px, py, pz] = rot(x, y, z), [, ly, lz] = rot(nx, ny, nz);
         const ooz = 1 / (pz + 3.6);
@@ -65,8 +72,8 @@ export function AsciiShape({ shape, cols = 52, rows = 26, speed = 1, className =
         const i = r * cols + c;
         if (ooz > depth[i]) {
           depth[i] = ooz;
-          const l = Math.max(0, 0.55 * ly - 0.7 * lz + gloss);
-          chars[i] = RAMP[Math.min(RAMP.length - 1, Math.floor(l * RAMP.length))];
+          const l = Math.min(0.99, Math.max(0.12, 0.55 * ly - 0.65 * lz + gloss));
+          chars[i] = RAMP[Math.max(1, Math.floor(l * RAMP.length))];
         }
       }
       let s = "";
@@ -89,5 +96,5 @@ export function AsciiShape({ shape, cols = 52, rows = 26, speed = 1, className =
     io.observe(el);
     return () => { io.disconnect(); cancelAnimationFrame(raf); };
   }, [shape, cols, rows, speed]);
-  return <pre ref={ref} aria-hidden className={`select-none overflow-hidden font-mono text-[9px] leading-[10px] text-accent sm:text-[11px] sm:leading-[12px] ${className}`} />;
+  return <pre ref={ref} aria-hidden className={`select-none overflow-hidden font-mono text-[7px] leading-[8px] text-ink sm:text-[8px] sm:leading-[9px] ${className}`} />;
 }
