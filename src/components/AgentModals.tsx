@@ -70,7 +70,7 @@ export function AddAgent({ vault, open, onClose, onDone }: { vault: VaultDto; op
         <div className="grid grid-cols-3 gap-2">
           {KINDS.map((k) => (
             <button key={k.kind} onClick={() => setKind(k.kind)} className={`rounded-xl border p-3 text-left transition ${kind === k.kind ? "border-accent bg-accent/10" : "border-line hover:border-mute/50"}`}>
-              <AgentKindIcon kind={k.kind} provider="claude" />
+              <AgentKindIcon kind={k.kind} size={20} />
               <div className="mt-2 text-[14.5px]">{k.title}</div>
               <div className="cap mt-0.5">{k.blurb}</div>
             </button>

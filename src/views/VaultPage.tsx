@@ -9,7 +9,7 @@ import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useVaultLogs } from "../hooks/useVaultData";
 import { useTx } from "../hooks/useTx";
 import { Empty, Section, Stat } from "../components/ui";
-import { AgentKindIcon, GmailIcon, Usdc } from "../components/Icons";
+import { AgentKindIcon, Usdc } from "../components/Icons";
 import { AppShell } from "../components/AppShell";
 import { Activity, Requests } from "../components/Requests";
 import { AddAgent, ConnectAgent, EditLimits } from "../components/AgentModals";
@@ -172,7 +172,7 @@ function Settings({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDon
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card">
-        <div className="cap flex items-center gap-2"><GmailIcon size={14} />Approver Gmail</div>
+        <div className="cap">Approver Gmail</div>
         <div className="mt-4 flex gap-3"><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} /><button className="btn-ghost btn shrink-0" disabled={!isOwner || !emailOk || email.trim().toLowerCase() === v.approverEmail || busy} onClick={saveEmail}>{busy ? "…" : "Change"}</button></div>
       </div>
       <div className="card">
