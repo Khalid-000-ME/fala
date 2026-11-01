@@ -36,8 +36,8 @@ body {
   .btn-sm { @apply px-4 py-1.5 text-[13px]; }
   .link-accent { @apply font-mono text-[13px] text-accent transition hover:opacity-70; }
   .input {
-    @apply w-full rounded-2xl border border-transparent bg-card px-4 py-3 font-mono text-[13.5px] outline-none transition
-      placeholder:text-mute/60 focus:border-ink;
+    @apply w-full rounded-xl border border-line bg-canvas px-4 py-3 font-mono text-[13.5px] outline-none transition
+      placeholder:text-mute/70 hover:border-mute/50 focus:border-accent focus:ring-1 focus:ring-accent/40;
   }
   .label { @apply mb-1.5 block font-mono text-[11.5px] uppercase tracking-wider text-mute; }
   .row { @apply grid items-center gap-x-6 border-b border-line py-5; }

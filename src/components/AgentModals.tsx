@@ -5,25 +5,37 @@ import { isAddress } from "viem";
 import { useApi, type AgentDto, type AgentKind, type KeyDto, type VaultDto } from "../lib/api";
 import { useOwnerWallet } from "../lib/owner";
 import { parseUsdc } from "../lib/format";
+import { AgentKindIcon, ProviderIcon } from "./Icons";
 import { Field, Modal } from "./ui";
 import { useTx } from "../hooks/useTx";
 
-const PROVIDERS = [["claude", "Claude (Code / Desktop)"], ["chatgpt", "ChatGPT / OpenAI"], ["cursor", "Cursor"], ["custom", "Other (MCP or HTTP)"]] as const;
+const PROVIDERS = [["claude", "Claude"], ["chatgpt", "ChatGPT"], ["cursor", "Cursor"], ["custom", "Other"]] as const;
 const KINDS: { kind: AgentKind; title: string; blurb: string }[] = [
-  { kind: "managed", title: "Fala agent", blurb: "Our built-in procurement agent. Give it a task and it spends within your limits." },
-  { kind: "connected", title: "Connect Claude or another provider", blurb: "We create a wallet and an API key. Plug it into Claude, Cursor or anything with MCP or HTTP." },
-  { kind: "byo", title: "My own agent", blurb: "You already run an agent with its own key. Register its address and set its limits." },
+  { kind: "connected", title: "Connect", blurb: "Use Claude, ChatGPT or Cursor" },
+  { kind: "managed", title: "Fala agent", blurb: "Give it tasks here" },
+  { kind: "byo", title: "My own", blurb: "Bring your own key" },
 ];
 
 type Limits = { per: string; daily: string; cap: string };
+const LIMITS: { key: keyof Limits; label: string; hint: string }[] = [
+  { key: "per", label: "Per payment", hint: "Paid without asking" },
+  { key: "daily", label: "Per day", hint: "Paid without asking" },
+  { key: "cap", label: "Largest request", hint: "Even you can't approve more" },
+];
 export const LimitFields = ({ f, set }: { f: Limits; set: (l: Limits) => void }) => (
-  <div className="grid grid-cols-3 gap-4">
-    <Field label="Auto / tx"><input className="input" value={f.per} onChange={(e) => set({ ...f, per: e.target.value })} /></Field>
-    <Field label="Auto / day"><input className="input" value={f.daily} onChange={(e) => set({ ...f, daily: e.target.value })} /></Field>
-    <Field label="Hard cap"><input className="input" value={f.cap} onChange={(e) => set({ ...f, cap: e.target.value })} /></Field>
+  <div className="space-y-2">
+    {LIMITS.map((l) => (
+      <label key={l.key} className="flex items-center justify-between gap-4">
+        <span><span className="block text-[14.5px]">{l.label}</span><span className="cap">{l.hint}</span></span>
+        <span className="relative w-36 shrink-0">
+          <input className="input !py-2.5 !pr-16 text-right" inputMode="decimal" value={f[l.key]} onChange={(e) => set({ ...f, [l.key]: e.target.value })} />
+          <span className="cap pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">USDC</span>
+        </span>
+      </label>
+    ))}
   </div>
 );
-const limitErr = (f: Limits) => (parseUsdc(f.per) > parseUsdc(f.cap) ? "Auto per-tx can't exceed the hard cap" : null);
+const limitErr = (f: Limits) => (parseUsdc(f.per) > parseUsdc(f.cap) ? "Per payment can't be above the largest request" : null);
 
 /** Create the agent record (and wallet), then the owner's wallet activates it onchain with the chosen limits. */
 export function AddAgent({ vault, open, onClose, onDone }: { vault: VaultDto; open: boolean; onClose: () => void; onDone: (a: { id: string; kind: AgentKind }) => void }) {
@@ -54,26 +66,33 @@ export function AddAgent({ vault, open, onClose, onDone }: { vault: VaultDto; op
 
   return (
     <Modal open={open} onClose={busy ? () => {} : onClose} title="Add an agent">
-      <div className="space-y-4">
-        <div className="grid gap-2">
+      <div className="space-y-5">
+        <div className="grid grid-cols-3 gap-2">
           {KINDS.map((k) => (
-            <button key={k.kind} onClick={() => setKind(k.kind)} className={`rounded-2xl border px-4 py-3 text-left transition ${kind === k.kind ? "border-ink bg-card" : "border-line hover:bg-card/60"}`}>
-              <div className="text-[17px]">{k.title}</div>
+            <button key={k.kind} onClick={() => setKind(k.kind)} className={`rounded-xl border p-3 text-left transition ${kind === k.kind ? "border-accent bg-accent/10" : "border-line hover:border-mute/50"}`}>
+              <AgentKindIcon kind={k.kind} provider="claude" />
+              <div className="mt-2 text-[14.5px]">{k.title}</div>
               <div className="cap mt-0.5">{k.blurb}</div>
             </button>
           ))}
         </div>
-        <Field label="Agent name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Research assistant" /></Field>
         {kind === "connected" && (
-          <Field label="Provider">
-            <select className="input" value={provider} onChange={(e) => setProvider(e.target.value)}>{PROVIDERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          </Field>
+          <div className="grid grid-cols-4 gap-2">
+            {PROVIDERS.map(([p, l]) => (
+              <button key={p} onClick={() => setProvider(p)} className={`flex items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-[13px] transition ${provider === p ? "border-accent bg-accent/10" : "border-line hover:border-mute/50"}`}><ProviderIcon provider={p} size={15} />{l}</button>
+            ))}
+          </div>
         )}
+        <Field label="Name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Shopper" /></Field>
         {kind === "byo" && <Field label="Agent address"><input className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="0x…" /></Field>}
-        <LimitFields f={lim} set={setLim} />
-        <p className="cap">Auto = paid instantly to known payees. Above it, you approve by email. The hard cap is a ceiling even an email can't lift.</p>
-        {err && <div className="cap text-bad">{err}</div>}
-        <button className="btn w-full" disabled={!!err || !!busy} onClick={create}>{busy || "Create and activate"}</button>
+        <div>
+          <div className="label">Spending limits</div>
+          <LimitFields f={lim} set={setLim} />
+          <p className="cap mt-3">Automatic payments only go to saved payees. Anything else needs your approval by email.</p>
+        </div>
+        {limitErr(lim) && <div className="cap text-bad">{limitErr(lim)}</div>}
+        <button className="btn w-full" disabled={!!err || !!busy} onClick={create}>{busy || "Create agent"}</button>
+        <p className="cap text-center">Your wallet signs once to activate it.</p>
       </div>
     </Modal>
   );

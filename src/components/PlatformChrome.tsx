@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { stallHint, useAuth } from "../hooks/useAuth";
 import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
+import { GoogleIcon } from "./Icons";
 
 /** Scroll state: `shown` hides the bar over the landing hero, `wide` stretches it from a minimal bar to its full 1100px width. */
 function useNavScroll() {
@@ -55,7 +56,7 @@ export function PlatformHeader() {
               {addr ? short(addr) : "Account"}
             </button>
           ) : ready ? (
-            <button className="btn btn-sm" onClick={() => login()}>Sign in</button>
+            <button className="btn btn-sm" onClick={() => login()}><GoogleIcon size={15} />Sign in</button>
           ) : stalled ? (
             <span className="tag rounded-full bg-bad/10 px-3 py-1 text-bad" title={stallHint()}>sign-in unavailable</span>
           ) : (
@@ -73,7 +74,7 @@ export function PlatformFooter() {
     <footer className="bg-black pb-12 pt-20 text-white">
       <div className="wrap flex flex-wrap items-center justify-between gap-6">
         <Logo light />
-        <div className="font-mono text-[13px] text-white/50">Unaudited · testnet · built on Arc</div>
+        <div className="font-mono text-[13px] text-white/50">Unaudited. Built on Arc.</div>
       </div>
     </footer>
   );

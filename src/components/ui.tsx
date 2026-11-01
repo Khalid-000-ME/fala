@@ -19,7 +19,7 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
     <div className="card flex min-h-[120px] flex-col justify-between">
       <div className="cap">{label}</div>
       <div>
-        <div className={`text-[42px] leading-none tracking-tightest ${tone === "bad" ? "text-bad" : tone === "ok" ? "text-ok" : ""}`}>{value}</div>
+        <div className={`text-[36px] leading-none tracking-tightest ${tone === "bad" ? "text-bad" : tone === "ok" ? "text-ok" : ""}`}>{value}</div>
         {hint && <div className="cap mt-2">{hint}</div>}
       </div>
     </div>

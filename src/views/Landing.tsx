@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import GradientASCII from "../components/reactbits/GradientASCII";
+import { GoogleIcon } from "../components/Icons";
 import { useAuth } from "../hooks/useAuth";
 
 const STEPS = [
@@ -38,7 +39,7 @@ export default function Landing() {
           <p className="lede mt-7 !text-white/70">Your agent pays small amounts on its own. Anything bigger needs one reply from Gmail.</p>
           <div className="mt-9">
             <button className="btn !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>
-              {ready ? "Sign in with Google" : "Loading"}
+              {ready ? <><GoogleIcon />Sign in with Google</> : "Loading"}
             </button>
           </div>
         </div>

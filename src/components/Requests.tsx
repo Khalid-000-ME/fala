@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { explorerTx, VAULT } from "../config/chain";
 import { ago, countdown, fmtUsdc, short } from "../lib/format";
 import { REJECTION, type FeedEvent, type FeedKind, type IntentRow } from "../lib/types";
+import { Usdc } from "./Icons";
 import { Empty, Section } from "./ui";
 import { useTx } from "../hooks/useTx";
 import { useOwnerWallet } from "../lib/owner";
@@ -13,7 +14,7 @@ const ENV_INBOUND = process.env.NEXT_PUBLIC_INBOUND_ADDRESS as string | undefine
 
 const CHIP: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "Pending", cls: "bg-warn/15 text-warn" },
-  APPROVED: { label: "Approved by email", cls: "bg-info/15 text-info" },
+  APPROVED: { label: "Approved", cls: "bg-info/15 text-info" },
   DENIED: { label: "Denied", cls: "bg-card text-mute" },
   EXPIRED: { label: "Expired", cls: "bg-card text-mute" },
   CANCELLED: { label: "Cancelled", cls: "bg-card text-mute" },
@@ -41,8 +42,9 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
           <div key={String(i.id)} className="card">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="cap">#{String(i.id)} · {short(i.agent)} → {short(i.payee)}</div>
-                <div className="mt-2 text-[40px] leading-none tracking-tightest">{fmtUsdc(i.amount)} <span className="text-[18px] text-mute">USDC</span></div>
+                <div className="cap">Request #{String(i.id)}</div>
+                <div className="cap mt-1">{short(i.agent)} → {short(i.payee)}</div>
+                <div className="mt-2 text-[40px] leading-none tracking-tightest"><Usdc value={fmtUsdc(i.amount)} size={24} /></div>
               </div>
               <span className="tag rounded-full bg-canvas px-3 py-1 text-warn">{countdown(i.expiresAt - now)}</span>
             </div>
@@ -60,7 +62,7 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
               ) : (
                 <span className="cap">Check your inbox for the Approve / Deny buttons.</span>
               )}
-              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => (onCancel ? onCancel(i.id) : write(VAULT!, "cancel", [i.id], "Cancel request"))}>[ cancel · owner ]</button>
+              <button className="cap ml-auto hover:text-ink disabled:opacity-40" disabled={!owner} onClick={() => (onCancel ? onCancel(i.id) : write(VAULT!, "cancel", [i.id], "Cancel request"))}>Cancel</button>
             </div>
           </div>
         ))}
@@ -79,10 +81,10 @@ export function Requests({ intents, ttl, owner, onCancel, inbound }: { intents: 
                   <span className="block truncate text-[17px]">{short(i.agent)} → {short(i.payee)}</span>
                   <span className="cap block truncate">
                     “{i.memo}”
-                    {status === "APPROVED" && <> · verified gmail.com DKIM{i.dkimT ? `, signed ${new Date(i.dkimT * 1000).toISOString().slice(11, 19)} UTC` : ""}</>}
+                    
                   </span>
                 </span>
-                <span className="text-right text-[17px] md:text-left">{fmtUsdc(i.amount)}</span>
+                <Usdc value={fmtUsdc(i.amount)} size={14} className="justify-end text-[17px] md:justify-start" />
                 <a className="cap text-right hover:text-accent" href={explorerTx(i.settledTx ?? i.tx)} target="_blank" rel="noreferrer">{ago(i.createdAt, now)} ↗</a>
               </div>
             );
@@ -135,7 +137,7 @@ export function Activity({ events, loading }: { events: FeedEvent[]; loading: bo
                   </span>
                   {e.memo && <span className="cap block truncate">“{e.memo}”</span>}
                 </span>
-                <span className="text-right text-[17px] md:text-left">{e.amount !== undefined ? fmtUsdc(e.amount) : ""}</span>
+                <span className="text-right text-[17px] md:text-left">{e.amount !== undefined && <Usdc value={fmtUsdc(e.amount)} size={14} />}</span>
                 <span className="cap text-right group-hover:text-accent">{ago(e.ts, now)}</span>
               </a>
             );

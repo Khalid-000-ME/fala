@@ -9,6 +9,7 @@ import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useVaultLogs } from "../hooks/useVaultData";
 import { useTx } from "../hooks/useTx";
 import { Empty, Section, Stat } from "../components/ui";
+import { AgentKindIcon, GmailIcon, Usdc } from "../components/Icons";
 import { AppShell } from "../components/AppShell";
 import { Activity, Requests } from "../components/Requests";
 import { AddAgent, ConnectAgent, EditLimits } from "../components/AgentModals";
@@ -61,9 +62,9 @@ export default function VaultPage({ id }: { id: string }) {
       {tab === "overview" && (
         <Section title="Overview">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Vault · USDC" value={v.balance} tone={v.belowMin ? "bad" : undefined} />
-            <Stat label="Your wallet · USDC" value={wallet ?? "…"} />
-            <Stat label="Waiting for you" value={pending} />
+            <Stat label="Vault balance" value={<Usdc value={v.balance} size={22} />} tone={v.belowMin ? "bad" : undefined} />
+            <Stat label="Your wallet" value={<Usdc value={wallet ?? "…"} size={22} />} />
+            <Stat label="Requests waiting" value={pending} />
             <Stat label="Agents" value={v.agents.length} />
           </div>
           <Funds v={v} isOwner={isOwner} onDone={load} />
@@ -135,11 +136,11 @@ function Funds({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDone: 
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
       <div className="card">
-        <div className="cap">Deposit · wallet has {wallet ?? "…"}</div>
+        <div className="flex items-center justify-between"><span className="cap">Deposit</span><span className="cap">{wallet ?? "…"} USDC available</span></div>
         <div className="mt-4 flex gap-3"><input className="input" inputMode="decimal" placeholder="0.00" value={dep} onChange={(e) => setDep(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !dep || !!busy} onClick={deposit}>{busy === "dep" ? "…" : "Deposit"}</button></div>
       </div>
       <div className="card">
-        <div className="cap">Withdraw</div>
+        <div className="flex items-center justify-between"><span className="cap">Withdraw</span><span className="cap">{v.balance} USDC available</span></div>
         <div className="mt-4 flex gap-3">
           <input className="input" inputMode="decimal" placeholder="0.00" value={wd} onChange={(e) => setWd(e.target.value)} />
           <button className="btn-ghost btn shrink-0" disabled={!isOwner || !!busy} onClick={() => setWd(v.balance)}>Max</button>
@@ -171,11 +172,11 @@ function Settings({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDon
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card">
-        <div className="cap">Approver Gmail</div>
+        <div className="cap flex items-center gap-2"><GmailIcon size={14} />Approver Gmail</div>
         <div className="mt-4 flex gap-3"><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} /><button className="btn-ghost btn shrink-0" disabled={!isOwner || !emailOk || email.trim().toLowerCase() === v.approverEmail || busy} onClick={saveEmail}>{busy ? "…" : "Change"}</button></div>
       </div>
       <div className="card">
-        <div className="cap">Minimum balance · USDC</div>
+        <div className="cap">Minimum balance (USDC)</div>
         <div className="mt-4 flex gap-3"><input className="input" inputMode="decimal" value={min} onChange={(e) => setMin(e.target.value)} /><button className="btn-ghost btn shrink-0" disabled={Number(min) === Number(v.minBalance) || !(Number(min) >= 0)} onClick={saveMin}>Save</button></div>
       </div>
       <div className="card lg:col-span-2">
@@ -207,20 +208,22 @@ function AgentRow({ a, i, v, isOwner, onEdit, onConnect, onChanged }: { a: Agent
       <div className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-[2.5rem_minmax(0,1.2fr)_minmax(0,1.4fr)_auto]">
         <span className="cap">{String(i + 1).padStart(2, "0")}</span>
         <div>
-          <div className="text-[26px] tracking-tightest">{a.name}</div>
-          <div className="cap mt-1">
-            {KIND_LABEL[a.kind]}{a.provider ? ` · ${a.provider}` : ""} · {short(a.address, 6)} · <span className={a.registered ? "text-ok" : "text-warn"}>{a.registered ? "active" : "not activated"}</span>
+          <div className="flex items-center gap-2.5 text-[24px] tracking-tightest"><AgentKindIcon kind={a.kind} provider={a.provider} size={20} />{a.name}</div>
+          <div className="cap mt-2 flex flex-wrap items-center gap-2">
+            <span className={`tag rounded-full px-2.5 py-0.5 ${a.registered ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"}`}>{a.registered ? "Active" : "Not active"}</span>
+            <span>{KIND_LABEL[a.kind]}</span>
+            <span>{short(a.address, 6)}</span>
           </div>
         </div>
         <div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-card"><div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} /></div>
-          <div className="cap mt-2 flex flex-wrap gap-x-5"><span>{a.autoSpentToday ?? 0} / {a.autoDaily ?? 0} auto today</span><span>auto ≤ {a.autoPerTx ?? 0}</span><span>hard cap {a.hardCap ?? 0}</span></div>
+          <div className="cap mt-2 flex flex-wrap gap-x-5"><span>{a.autoSpentToday ?? 0} of {a.autoDaily ?? 0} USDC spent today</span><span>Up to {a.autoPerTx ?? 0} USDC alone</span><span>Limit {a.hardCap ?? 0} USDC</span></div>
           {a.kind !== "byo" && <div className="cap mt-1">{a.keys?.length ?? 0} API key{(a.keys?.length ?? 0) === 1 ? "" : "s"}</div>}
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
           {!a.registered ? <button className="btn btn-sm" disabled={!isOwner} onClick={onEdit}>Activate</button> : <button className="btn-ghost btn btn-sm" disabled={!isOwner} onClick={onEdit}>Edit limits</button>}
           {a.kind !== "byo" && <button className="btn-ghost btn btn-sm" onClick={onConnect}>{a.kind === "connected" ? "Connect" : "API key"}</button>}
-          <button className="cap px-2 hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={remove}>[ remove ]</button>
+          <button className="cap px-2 hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={remove}>Remove</button>
         </div>
       </div>
       {a.kind === "managed" && (
@@ -242,7 +245,7 @@ function Payees({ v, known, isOwner }: { v: VaultDto; known: string[]; isOwner: 
       <div className="cap">Paid instantly within an agent's allowance</div>
       <ul className="mt-4 space-y-2">
         {known.length ? known.map((a) => (
-          <li key={a} className="flex items-center justify-between gap-3 font-mono text-[13px]"><span>{a}</span><button className="cap hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={() => owner.write(v.address, "setPayee", [a as Address, false], "Remove payee")}>[ remove ]</button></li>
+          <li key={a} className="flex items-center justify-between gap-3 font-mono text-[13px]"><span>{a}</span><button className="cap hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={() => owner.write(v.address, "setPayee", [a as Address, false], "Remove payee")}>Remove</button></li>
         )) : <li className="cap">None yet.</li>}
       </ul>
       <div className="mt-4 flex gap-3"><input className="input" placeholder="0x… payee address" value={p} onChange={(e) => setP(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !isAddress(p)} onClick={async () => (await owner.write(v.address, "setPayee", [p as Address, true], "Add payee")) && setP("")}>Add</button></div>

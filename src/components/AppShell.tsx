@@ -48,8 +48,9 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
         )}
         <div className="mt-auto hidden flex-col items-start gap-3 md:flex">
           <NetworkBadge />
+          {addr && <span className="cap">{short(addr)}</span>}
           <ThemeToggle />
-          <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>{addr ? `${short(addr)} · Sign out` : "Sign out"}</button>
+          <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>Sign out</button>
         </div>
       </aside>
       <main className="min-w-0 px-5 py-8 sm:px-10 sm:py-12"><div className="mx-auto max-w-[960px]">{children}</div></main>

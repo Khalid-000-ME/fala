@@ -9,6 +9,7 @@ import { useOwnerWallet } from "../lib/owner";
 import { short } from "../lib/format";
 import { Empty, Field, Modal, Section, Stat } from "../components/ui";
 import { AppShell } from "../components/AppShell";
+import { Usdc } from "../components/Icons";
 import { useTx } from "../hooks/useTx";
 
 export default function Dashboard() {
@@ -31,7 +32,7 @@ export default function Dashboard() {
         title="Vaults"
         aside={<button className="btn" onClick={() => setOpen(true)}>New vault</button>}
       >
-        <div className="mb-4"><Stat label={`Wallet ${short(address)} · USDC`} value={wallet ?? "…"} /></div>
+        <div className="mb-4"><Stat label={`Wallet ${short(address)}`} value={<Usdc value={wallet ?? "…"} size={22} />} /></div>
         {vaults === null ? <Empty>Loading your vaults…</Empty> : vaults.length === 0 ? (
           <div className="card flex flex-col items-start gap-4 py-12">
             <div className="text-[28px] tracking-tightest">Create your first vault</div>
@@ -47,11 +48,11 @@ export default function Dashboard() {
                     <div className="text-[26px] tracking-tightest">{v.name}</div>
                     {v.frozen ? <span className="tag rounded-full bg-[#0b2a5b] px-3 py-1 text-white">frozen</span> : v.belowMin ? <span className="tag rounded-full bg-bad/15 px-3 py-1 text-bad">needs funds</span> : <span className="tag rounded-full bg-canvas px-3 py-1 text-ok">healthy</span>}
                   </div>
-                  <div className="mt-5 text-[40px] leading-none tracking-tightest">{v.balance} <span className="text-[16px] text-mute">USDC</span></div>
+                  <div className="mt-5 text-[40px] leading-none tracking-tightest"><Usdc value={v.balance} size={22} /></div>
                   {Number(v.minBalance) > 0 && (
                     <>
                       <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-canvas"><div className={`h-full rounded-full ${v.belowMin ? "bg-bad" : "bg-ok"}`} style={{ width: `${pct}%` }} /></div>
-                      <div className="cap mt-2">minimum {v.minBalance} USDC{v.belowMin && <> · top up {v.shortfall}</>}</div>
+                      <div className="cap mt-2">{v.belowMin ? `Top up ${v.shortfall} USDC` : `Minimum ${v.minBalance} USDC`}</div>
                     </>
                   )}
                   <div className="cap mt-4">{v.agentCount} agent{v.agentCount === 1 ? "" : "s"}</div>
@@ -88,7 +89,7 @@ function NewVault({ open, onClose, onDone }: { open: boolean; onClose: () => voi
       <div className="space-y-4">
         <Field label="Vault name"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Procurement" /></Field>
         <Field label="Send approval emails to (Gmail)"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="approver@gmail.com" /></Field>
-        <Field label="Minimum balance · USDC"><input className="input" inputMode="decimal" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} /></Field>
+        <Field label="Minimum balance (USDC)"><input className="input" inputMode="decimal" value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} /></Field>
         <p className="cap">Use a dedicated Gmail. Its headers are public onchain.</p>
         {err && <div className="cap text-bad">{err}</div>}
         <button className="btn w-full" disabled={!!err || busy} onClick={create}>{busy ? "Deploying your vault on Arc… (about 10 seconds)" : "Create vault"}</button>
