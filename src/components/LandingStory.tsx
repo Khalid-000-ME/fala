@@ -16,9 +16,9 @@ function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; 
 }
 
 const CARDS: { shape: ShapeName; title: string; body: string }[] = [
-  { shape: "coin", title: "Small spends just happen", body: "Stay under your limit and the agent pays saved payees instantly." },
-  { shape: "envelope", title: "Big ones ask first", body: "Above the limit, no money moves until you reply." },
+  { shape: "envelope", title: "It lands in your inbox", body: "Requests arrive like any other email, on your phone or laptop." },
   { shape: "lock", title: "Your reply is the key", body: "Arc verifies Google's signature on your email. A tricked agent can't fake it." },
+  { shape: "coin", title: "Small spends skip the ask", body: "Pick an amount your agent can pay on its own. You only hear about the rest." },
 ];
 
 export function LandingStory({ onStart, ready }: { onStart: () => void; ready: boolean }) {
@@ -49,8 +49,8 @@ export function LandingStory({ onStart, ready }: { onStart: () => void; ready: b
       <section className="wrap grid items-center gap-12 pb-24 lg:grid-cols-2 sm:pb-32">
         <Reveal className="order-2 flex justify-center overflow-hidden lg:order-1"><AsciiShape shape="plane" cols={90} rows={44} /></Reveal>
         <Reveal className="order-1 lg:order-2" delay={120}>
-          <h2 className="h-section">One reply. Payment done.</h2>
-          <p className="lede mt-6">No wallet app and no seed phrase. Sign in with Google, set your limits, and you're ready.</p>
+          <h2 className="h-section">If you can send an email, you can approve.</h2>
+          <p className="lede mt-6">No wallet app and no seed phrase. Sign in with Google and you're ready.</p>
           <button className="btn mt-8" disabled={!ready} onClick={() => onStart()}><span className="rounded bg-white p-0.5"><GoogleIcon size={14} /></span>Start with Google</button>
         </Reveal>
       </section>

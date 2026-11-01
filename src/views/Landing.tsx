@@ -74,15 +74,15 @@ export default function Landing() {
             className="absolute inset-x-0 top-[13vh] z-20 flex flex-col items-center px-5 text-center"
             style={{ transform: `translateY(${-p * 120}px)`, opacity: intro, pointerEvents: intro < 0.1 ? "none" : "auto" }}
           >
-            <div className="cap !text-white/60">Spending limits for AI agents</div>
-            <h1 className="mt-5 max-w-5xl font-normal leading-[1.04] tracking-tightest text-white" style={{ fontSize: "min(7vw, 9vh)" }}>Give your agent a budget, not a blank check.</h1>
-            <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-white/70">It pays the small stuff on its own. For anything bigger, it emails you, and nothing moves until you reply.</p>
+            <div className="cap !text-white/60">Email approvals for AI agents</div>
+            <h1 className="mt-5 max-w-5xl font-normal leading-[1.04] tracking-tightest text-white" style={{ fontSize: "min(7vw, 9vh)" }}>Approve your agent's payments from Gmail.</h1>
+            <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-white/70">No wallet app. No dashboard. Your agent emails you, you reply, and it's paid.</p>
             <button className="btn mt-7 !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>{signIn}</button>
           </div>
 
           {/* Title and video share one column, so their edges line up. */}
           <div className="absolute left-1/2 top-0 z-20 flex h-24 -translate-x-1/2 items-center justify-between gap-4" style={{ width: VIDEO_W, opacity: compact, pointerEvents: compact < 0.6 ? "none" : "auto" }}>
-            <h2 className="text-[clamp(18px,2.6vw,30px)] leading-tight tracking-tightest text-white">See one approval, start to finish</h2>
+            <h2 className="text-[clamp(18px,2.6vw,30px)] leading-tight tracking-tightest text-white">One email. One reply. Paid.</h2>
             <button className="btn shrink-0 !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>{signIn}</button>
           </div>
 

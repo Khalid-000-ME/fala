@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["300", "400", "500"],
 export const metadata: Metadata = {
   title: "Fala",
   description:
-    "Give your AI agent a budget, not a blank check. Small payments run on their own. Bigger ones wait for your reply from Gmail, verified on Arc.",
+    "Approve your AI agent's payments from Gmail. Your agent emails you, you reply, and Arc verifies it before any money moves.",
   icons: { icon: "/favicon.svg" },
 };
 
