@@ -90,7 +90,7 @@ export function LandingStory({ onStart, ready }: { onStart: () => void; ready: b
         <Reveal className="order-1 lg:order-2" delay={120}>
           <h2 className="h-section">Tap Approve. Press send.</h2>
           <p className="lede mt-6">No wallet app. No seed phrase. No dashboard to check. Your reply is the key.</p>
-          <button className="btn mt-8" disabled={!ready} onClick={onStart}><span className="rounded bg-white p-0.5"><GoogleIcon size={14} /></span>Start with Google</button>
+          <button className="btn mt-8" disabled={!ready} onClick={() => onStart()}><span className="rounded bg-white p-0.5"><GoogleIcon size={14} /></span>Start with Google</button>
         </Reveal>
       </section>
     </>
