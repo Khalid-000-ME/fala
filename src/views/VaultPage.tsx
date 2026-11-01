@@ -33,15 +33,15 @@ export default function VaultPage({ id }: { id: string }) {
   const logs = useVaultLogs(v ? { address: v.address, deployBlock: BigInt(v.deployBlock) } : undefined);
   const known = useMemo(() => Object.entries(logs.payees).filter(([, k]) => k).map(([a]) => a), [logs.payees]);
 
-  if (missing) return <main className="wrap py-24"><Empty>We couldn't find that vault. <Link className="underline" href="/app">Back to my vaults</Link></Empty></main>;
-  if (!v) return <main className="wrap py-24"><Empty>Loading vault…</Empty></main>;
+  if (missing) return <main className="wrap pb-24 pt-32"><Empty>We couldn't find that vault. <Link className="underline" href="/app">Back to my vaults</Link></Empty></main>;
+  if (!v) return <main className="wrap pb-24 pt-32"><Empty>Loading vault…</Empty></main>;
 
   const isOwner = !!owner.address && owner.address.toLowerCase() === v.ownerAddress.toLowerCase();
   const pending = logs.intents.filter((i) => i.status === "PENDING" && i.expiresAt > Date.now() / 1000).length;
   const approved = logs.intents.filter((i) => i.status === "APPROVED").length;
 
   return (
-    <main>
+    <main className="pt-24">
       <section className="wrap pb-2 pt-10">
         <Link href="/app" className="cap hover:text-ink">← My vaults</Link>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
@@ -51,14 +51,14 @@ export default function VaultPage({ id }: { id: string }) {
               <a className="underline underline-offset-4" target="_blank" rel="noreferrer" href={explorerAddr(v.address)}>{short(v.address, 6)}</a> · approvals to {v.approverEmail}
             </div>
           </div>
-          <button className="btn-ghost btn btn-sm" onClick={() => router.push("/explore")}>Live demo</button>
+          <button className="btn-ghost btn btn-sm" onClick={() => router.push("/app")}>All vaults</button>
         </div>
         {!isOwner && owner.ready && <div className="cap mt-4 text-bad">Your wallet isn't this vault's owner, so owner actions are disabled.</div>}
       </section>
 
       <Banners v={v} owner={owner} isOwner={isOwner} onDone={load} />
 
-      <Section id="overview" title="Overview" sub="Balance, minimum and approvals at a glance.">
+      <Section id="overview" title="Overview">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Vault balance · USDC" value={v.balance} hint={`minimum ${v.minBalance}`} tone={v.belowMin ? "bad" : undefined} />
           <Stat label="Agents" value={v.agents.length} hint="registered on this vault" />
@@ -71,7 +71,7 @@ export default function VaultPage({ id }: { id: string }) {
       <Section
         id="agents"
         title="Agents"
-        sub="Anything that can ask this vault for money. Add our agent, connect Claude or another provider, or register one you run yourself."
+        sub="Anything that can ask this vault for money."
         aside={<button className="btn" onClick={() => setAdding(true)}>Add agent [ + ]</button>}
       >
         {v.agents.length === 0 ? (
@@ -238,7 +238,7 @@ function Payees({ v, known, isOwner }: { v: VaultDto; known: string[]; isOwner: 
       <ul className="mt-4 space-y-2">
         {known.length ? known.map((a) => (
           <li key={a} className="flex items-center justify-between gap-3 font-mono text-[13px]"><span>{a}</span><button className="cap hover:text-bad disabled:opacity-40" disabled={!isOwner} onClick={() => owner.write(v.address, "setPayee", [a as Address, false], "Remove payee")}>[ remove ]</button></li>
-        )) : <li className="cap">None yet — every payment needs your approval.</li>}
+        )) : <li className="cap">None yet. Every payment needs your approval.</li>}
       </ul>
       <div className="mt-4 flex gap-3"><input className="input" placeholder="0x… payee address" value={p} onChange={(e) => setP(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !isAddress(p)} onClick={async () => (await owner.write(v.address, "setPayee", [p as Address, true], "Add payee")) && setP("")}>Add</button></div>
     </div>
