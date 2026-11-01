@@ -60,3 +60,11 @@ input[inputmode="decimal"] { font-family: var(--font-mono); }
 @keyframes logo-dot { 0%, 100% { opacity: .2; transform: scale(.75); } 40% { opacity: 1; transform: scale(1.1); } }
 .logo-dot { animation: logo-dot 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: reduce) { .logo-dot { animation-duration: 3s; } }
+@keyframes mail-in { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+.mail-in { animation: mail-in .35s ease-out both; }
+@keyframes mail-open { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.mail-open { animation: mail-open .3s ease-out both; }
+@keyframes mail-ripple { from { transform: scale(0); opacity: .5; } to { transform: scale(4); opacity: 0; } }
+.mail-ripple { position: absolute; inset: 0; margin: auto; width: 32px; height: 32px; border-radius: 9999px; background: #fff; animation: mail-ripple .9s ease-out infinite; }
+@keyframes mail-pulse { 50% { box-shadow: 0 0 0 7px rgb(11 87 208 / .2); } }
+.mail-pulse { animation: mail-pulse 1s ease-in-out infinite; }
