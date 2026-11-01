@@ -31,12 +31,12 @@ export function PlatformHeader() {
 
   if (pathname !== "/") return null;
   return (
-    <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-3">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-3">
       <div
         style={{ maxWidth: wide ? "1100px" : "400px" }}
         className={`flex h-14 w-full items-center justify-between gap-4 rounded-2xl border px-5 backdrop-blur-xl transition-all duration-500 ease-out ${
           shown
-            ? "border-line/60 bg-canvas/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.25)]"
+            ? "pointer-events-auto border-line/60 bg-canvas/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.25)]"
             : "pointer-events-none border-transparent bg-transparent opacity-0"
         }`}
       >
