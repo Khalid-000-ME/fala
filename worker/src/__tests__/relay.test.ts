@@ -113,8 +113,8 @@ describe("approval email", () => {
   const body = decode(raw);
 
   it("has a friendly, specific subject and sender name", () => {
-    expect(header(raw, "Subject")).toBe("Approve 2.00 USDC to DataCo? · Request #42");
-    expect(approvalSubject(mail)).toBe("Approve 2.00 USDC to DataCo? · Request #42");
+    expect(header(raw, "Subject")).toBe("Approve 2.00 USDC to DataCo? (Request #42");
+    expect(approvalSubject(mail)).toBe("Approve 2.00 USDC to DataCo? (Request #42");
     expect(header(raw, "From")).toBe("Fala Approvals <fala.relay@gmail.com>");
   });
 
@@ -126,7 +126,7 @@ describe("approval email", () => {
   });
 
   it("explains the code in plain words and shows the payment details", () => {
-    expect(body).toContain("Why does the reply have a code in its subject?");
+    expect(body).toContain("Google signs your reply");
     expect(body).toContain("Nothing moves until you say yes");
     expect(body).toContain("annual API plan");
     expect(body).toContain("Procurement vault");
@@ -147,7 +147,7 @@ describe("approval email", () => {
 
   it("formats expiry in friendly terms", () => {
     const now = 1_800_000_000;
-    expect(friendlyExpiry(now + 59 * 60, now)).toMatch(/^in 59 minutes · /);
+    expect(friendlyExpiry(now + 59 * 60, now)).toMatch(/^in 59 minutes \(/);
     expect(friendlyExpiry(now + 3 * 3600, now)).toMatch(/^in 3 hours · /);
     expect(friendlyExpiry(now + 3 * 86400, now)).toMatch(/^in 3 days · /);
     expect(friendlyExpiry(now - 5, now)).toMatch(/^expired/);
