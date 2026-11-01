@@ -7,7 +7,7 @@ import { stallHint, useAuth } from "../hooks/useAuth";
 import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
 
-/** Scroll state: `shown` hides the bar over the landing hero, `wide` stretches it from a compact bar to full width. */
+/** Scroll state: `shown` hides the bar over the landing hero, `wide` stretches it from a minimal bar to its full 1100px width. */
 function useNavScroll() {
   const pathname = usePathname();
   const [y, setY] = useState(0);
@@ -32,7 +32,7 @@ export function PlatformHeader() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-3">
       <div
-        style={{ maxWidth: wide ? "100%" : "720px" }}
+        style={{ maxWidth: wide ? "1100px" : "400px" }}
         className={`flex h-14 w-full items-center justify-between gap-4 rounded-2xl border px-5 backdrop-blur-xl transition-all duration-500 ease-out ${
           shown
             ? "border-white/40 bg-white/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.06)]"
@@ -41,7 +41,7 @@ export function PlatformHeader() {
       >
         <Link href={authenticated ? "/app" : "/"} aria-label="Fala home"><Logo /></Link>
         {authenticated && (
-          <nav className="hidden md:flex">
+          <nav className={`hidden ${wide ? "md:flex" : ""}`}>
             <Link href="/app" className={`text-[14.5px] transition ${pathname === "/app" ? "text-ink" : "text-mute hover:text-ink"}`}>
               Vaults
             </Link>
