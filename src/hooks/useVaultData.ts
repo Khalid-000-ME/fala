@@ -158,7 +158,12 @@ export function useVaultLogs(target?: { address: `0x${string}`; deployBlock: big
         }
         if (stop) return;
         cursor.current = tip;
-        if (fresh.length) setLogs((p) => ({ raw: [...p.raw, ...fresh], ts: tsCache.current }));
+        // Overlapping polls can fetch the same range, so merge by transaction and log index.
+        if (fresh.length) setLogs((p) => {
+          const seen = new Set(p.raw.map((l) => `${l.transactionHash}-${l.logIndex}`));
+          const added = fresh.filter((l) => { const k = `${l.transactionHash}-${l.logIndex}`; if (seen.has(k)) return false; seen.add(k); return true; });
+          return { raw: [...p.raw, ...added], ts: tsCache.current };
+        });
         setLoading(false);
       } catch (e) {
         console.error("fala: failed to load vault events", e);
