@@ -24,7 +24,7 @@ export default function Landing() {
         <div className="absolute inset-0" aria-hidden>
           <GradientASCII
             colors={["#0b1f6b", "#1e3fd8", "#2f6bff", "#7db4ff"]}
-            shape="horizon"
+            shape="rise"
             characters=" =+xX0S8#@"
             cellSize={18}
             density={0.8}
