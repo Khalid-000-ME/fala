@@ -16,9 +16,9 @@ function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; 
 }
 
 const CARDS: { shape: ShapeName; title: string; body: string }[] = [
-  { shape: "coin", title: "Small spends run alone", body: "Set a limit. Under it, your agent pays saved payees right away." },
-  { shape: "envelope", title: "Big ones come to you", body: "Anything above the limit waits for a yes from your Gmail." },
-  { shape: "lock", title: "Only you can say yes", body: "Arc checks Google's signature on your reply before money moves." },
+  { shape: "coin", title: "Small spends just happen", body: "Stay under your limit and the agent pays saved payees instantly." },
+  { shape: "envelope", title: "Big ones ask first", body: "Above the limit, no money moves until you reply." },
+  { shape: "lock", title: "Your reply is the key", body: "Arc verifies Google's signature on your email. A tricked agent can't fake it." },
 ];
 
 export function LandingStory({ onStart, ready }: { onStart: () => void; ready: boolean }) {
@@ -26,8 +26,8 @@ export function LandingStory({ onStart, ready }: { onStart: () => void; ready: b
     <>
       <section className="wrap grid items-center gap-12 py-24 lg:grid-cols-2 sm:py-32">
         <Reveal>
-          <h2 className="h-section">Your day stays yours.</h2>
-          <p className="lede mt-6">Your agent works in the background. When it needs a bigger yes, one email shows up with the rest of your mail.</p>
+          <h2 className="h-section">Approvals that fit your day.</h2>
+          <p className="lede mt-6">No new app to check. When your agent needs a yes, the request lands in Gmail with the rest of your mail.</p>
         </Reveal>
         <Reveal className="flex justify-center overflow-hidden" delay={120}><AsciiShape shape="clock" cols={90} rows={44} /></Reveal>
       </section>
@@ -49,8 +49,8 @@ export function LandingStory({ onStart, ready }: { onStart: () => void; ready: b
       <section className="wrap grid items-center gap-12 pb-24 lg:grid-cols-2 sm:pb-32">
         <Reveal className="order-2 flex justify-center overflow-hidden lg:order-1"><AsciiShape shape="plane" cols={90} rows={44} /></Reveal>
         <Reveal className="order-1 lg:order-2" delay={120}>
-          <h2 className="h-section">Tap Approve. Press send.</h2>
-          <p className="lede mt-6">No wallet app. No seed phrase. No dashboard to check. Your reply is the key.</p>
+          <h2 className="h-section">One reply. Payment done.</h2>
+          <p className="lede mt-6">No wallet app and no seed phrase. Sign in with Google, set your limits, and you're ready.</p>
           <button className="btn mt-8" disabled={!ready} onClick={() => onStart()}><span className="rounded bg-white p-0.5"><GoogleIcon size={14} /></span>Start with Google</button>
         </Reveal>
       </section>
