@@ -18,7 +18,9 @@ function useNavScroll() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const landing = pathname === "/";
-  return { shown: !landing || y > 120, wide: y > (landing ? 400 : 48) };
+  // The landing hero is a tall sticky section with its own title and button, so stay out of its way.
+  const heroEnd = typeof window === "undefined" ? 0 : window.innerHeight * 1.32;
+  return { shown: !landing || y > heroEnd, wide: y > (landing ? heroEnd + 120 : 48) };
 }
 
 export function PlatformHeader() {
