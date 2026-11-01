@@ -24,15 +24,16 @@ export default function Landing() {
         <div className="absolute inset-0" aria-hidden>
           <GradientASCII
             lightMode
-            colors={["#e8527a", "#7a5cff", "#0a0a0a"]}
+            colors={["#e8527a", "#7a5cff", "#1e3fd8", "#0a0a0a"]}
             shape="horizon"
-            cellSize={16}
-            glyphOpacity={0.7}
-            gradientOpacity={0.55}
-            speed={0.6}
-            grain={0.05}
+            cellSize={14}
+            glyphOpacity={1}
+            gradientOpacity={1}
+            speed={0.7}
+            grain={0.06}
           />
-          <div className="absolute inset-0 bg-white/45" />
+          {/* A soft pool of white behind the words only, so the art still reads at the edges. */}
+          <div className="absolute inset-0 [background:radial-gradient(ellipse_52%_46%_at_50%_50%,rgba(255,255,255,.92)_0%,rgba(255,255,255,.72)_45%,rgba(255,255,255,0)_100%)]" />
         </div>
         <div className="rise wrap relative z-10 flex flex-col items-center text-center">
           <div className="cap mb-6">Spending vaults for AI agents on Arc</div>

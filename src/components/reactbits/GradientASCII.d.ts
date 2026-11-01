@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 /** Hand-written types for the react-bits component: it destructures `dpr`/`style` with no default, so inference makes them required. */
 export interface GradientASCIIProps {
   colors?: string[];
-  shape?: "horizon" | "sphere" | "tunnel" | "waves" | "vortex";
+  shape?: "horizon" | "pinch" | "rise" | "eclipse";
   characters?: string;
   cellSize?: number;
   density?: number;
@@ -20,7 +20,7 @@ export interface GradientASCIIProps {
   variation?: number;
   mouseInteraction?: boolean;
   scrambleRadius?: number;
-  clickEffect?: "wave" | "none";
+  clickEffect?: "none" | "wave" | "burst";
   intro?: boolean;
   lightMode?: boolean;
   fontFamily?: string;
