@@ -5,6 +5,7 @@ import Link from "next/link";
 import { isAddress, parseUnits, type Address } from "viem";
 import { useApi, type AgentDto, type VaultDto } from "../lib/api";
 import { useOwnerWallet } from "../lib/owner";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useVaultLogs } from "../hooks/useVaultData";
 import { useTx } from "../hooks/useTx";
 import { Empty, Section, Stat } from "../components/ui";
@@ -34,6 +35,7 @@ export default function VaultPage({ id }: { id: string }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<AgentDto | null>(null);
   const [connecting, setConnecting] = useState<AgentDto | null>(null);
+  const wallet = useWalletBalance();
   const [tab, setTab] = useState("overview");
   useEffect(() => { const h = location.hash.slice(1); if (TABS.some((t) => t.id === h)) setTab(h); }, []);
   const select = (t: string) => { setTab(t); history.replaceState(null, "", `#${t}`); };
@@ -58,8 +60,9 @@ export default function VaultPage({ id }: { id: string }) {
 
       {tab === "overview" && (
         <Section title="Overview">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Balance · USDC" value={v.balance} tone={v.belowMin ? "bad" : undefined} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Vault · USDC" value={v.balance} tone={v.belowMin ? "bad" : undefined} />
+            <Stat label="Your wallet · USDC" value={wallet ?? "…"} />
             <Stat label="Waiting for you" value={pending} />
             <Stat label="Agents" value={v.agents.length} />
           </div>
@@ -117,6 +120,7 @@ function Banners({ v, owner, isOwner, onDone }: { v: VaultDto; owner: ReturnType
 
 function Funds({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDone: () => void }) {
   const owner = useOwnerWallet();
+  const wallet = useWalletBalance();
   const [dep, setDep] = useState("");
   const [wd, setWd] = useState("");
   const [busy, setBusy] = useState("");
@@ -131,7 +135,7 @@ function Funds({ v, isOwner, onDone }: { v: VaultDto; isOwner: boolean; onDone: 
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
       <div className="card">
-        <div className="cap">Deposit</div>
+        <div className="cap">Deposit · wallet has {wallet ?? "…"}</div>
         <div className="mt-4 flex gap-3"><input className="input" inputMode="decimal" placeholder="0.00" value={dep} onChange={(e) => setDep(e.target.value)} /><button className="btn shrink-0" disabled={!isOwner || !dep || !!busy} onClick={deposit}>{busy === "dep" ? "…" : "Deposit"}</button></div>
       </div>
       <div className="card">

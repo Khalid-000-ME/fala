@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatUnits } from "viem";
 import { useApi, type VaultDto } from "../lib/api";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import { useOwnerWallet } from "../lib/owner";
 import { short } from "../lib/format";
 import { Empty, Field, Modal, Section, Stat } from "../components/ui";
@@ -19,19 +19,7 @@ export default function Dashboard() {
   const [open, setOpen] = useState(false);
 
   const { address } = useOwnerWallet();
-  const [wallet, setWallet] = useState<string>();
-  // Native USDC on Arc has 18 decimals. Read through the same-origin RPC proxy.
-  useEffect(() => {
-    if (!address) return;
-    const read = () =>
-      fetch("/api/rpc", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }) })
-        .then((r) => r.json())
-        .then((r) => r.result && setWallet(Number(formatUnits(BigInt(r.result), 18)).toFixed(2)))
-        .catch(() => {});
-    read();
-    const t = setInterval(read, 20000);
-    return () => clearInterval(t);
-  }, [address]);
+  const wallet = useWalletBalance();
 
   const load = () => api<VaultDto[]>("/api/vaults").then(setVaults).catch((e) => toast(e.message, "bad"));
   useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); /* eslint-disable-next-line */ }, []);
