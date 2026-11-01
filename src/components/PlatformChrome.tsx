@@ -7,34 +7,36 @@ import { stallHint, useAuth } from "../hooks/useAuth";
 import { short } from "../lib/format";
 import { Logo, NetworkBadge } from "./Chrome";
 
-/** On the landing hero the bar stays out of the way; everywhere else it is always solid. */
-function useOverHero() {
+/** Scroll state: `shown` hides the bar over the landing hero, `wide` stretches it from a compact bar to full width. */
+function useNavScroll() {
   const pathname = usePathname();
-  const [atTop, setAtTop] = useState(true);
+  const [y, setY] = useState(0);
   useEffect(() => {
-    const onScroll = () => setAtTop(window.scrollY < 120);
+    const onScroll = () => setY(window.scrollY);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  return pathname === "/" && atTop;
+  const landing = pathname === "/";
+  return { shown: !landing || y > 120, wide: y > (landing ? 400 : 48) };
 }
 
 export function PlatformHeader() {
   const { ready, stalled, authenticated, user, login, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const overHero = useOverHero();
+  const { shown, wide } = useNavScroll();
   // Show the wallet, never the Google address: the header is on screen in demos and screenshots.
   const addr = user?.wallet?.address;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-4">
+    <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-3">
       <div
-        className={`flex h-14 w-full max-w-[1100px] items-center justify-between gap-4 rounded-full px-5 transition duration-300 ${
-          overHero
-            ? "border border-transparent bg-transparent opacity-0"
-            : "border border-white/40 bg-white/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.06)] backdrop-blur-xl"
+        style={{ maxWidth: wide ? "100%" : "720px" }}
+        className={`flex h-14 w-full items-center justify-between gap-4 rounded-2xl border px-5 backdrop-blur-xl transition-all duration-500 ease-out ${
+          shown
+            ? "border-white/40 bg-white/60 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,.06)]"
+            : "pointer-events-none border-transparent bg-transparent opacity-0"
         }`}
       >
         <Link href={authenticated ? "/app" : "/"} aria-label="Fala home"><Logo /></Link>
