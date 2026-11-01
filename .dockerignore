@@ -1,0 +1,20 @@
+# Build context is the repo root, but only server/ and worker/src are needed in the image.
+**/node_modules
+.git
+.next
+.vscode
+public
+src
+contracts
+docs
+spike
+prompts
+agent
+scripts
+*.mp4
+*.md
+**/.env
+**/.env.*
+**/*.db
+**/*.db-journal
+**/*.log
