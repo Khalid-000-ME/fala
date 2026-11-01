@@ -38,6 +38,9 @@ const GREEN = "#18864b";
 const RED = "#d92d20";
 const BLUE = "#2563eb";
 const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
+/** The six-dot mark built from text, since mail clients block SVG and hosted images. */
+const dots = (n: number) => Array(n).fill("●").join("&nbsp;");
+const LOGO = `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" style="font:7px/7px Arial,sans-serif;color:#0a0a0a;padding-right:8px;">${dots(3)}<br>${dots(2)}<br>${dots(1)}</td><td style="font:600 17px ${FONT};letter-spacing:.04em;color:#0a0a0a;">FALA</td></tr></table>`;
 const MONO = `ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`;
 
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -56,7 +59,7 @@ export function friendlyExpiry(expiresAt: number, now = Math.floor(Date.now() / 
   if (s <= 0) return `expired (${abs})`;
   const m = Math.round(s / 60);
   const rel = m < 60 ? `in ${m} minute${m === 1 ? "" : "s"}` : m < 60 * 36 ? `in ${Math.round(m / 60)} hour${Math.round(m / 60) === 1 ? "" : "s"}` : `in ${Math.round(m / 1440)} days`;
-  return `${rel} · ${abs}`;
+  return `${rel} (${abs})`;
 }
 
 export function mime(o: { from: string; fromName?: string; to: string; subject: string; text: string; html: string }): string {
@@ -94,9 +97,9 @@ export function layout(o: { preheader: string; eyebrow: string; title: string; b
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f4f4f5;">${esc(o.preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;"><tr><td align="center" style="padding:28px 12px;">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;">
-  <tr><td style="padding:0 4px 14px 4px;font:600 15px ${MONO};letter-spacing:.02em;color:${INK};">⠶&nbsp;FALA</td></tr>
+  <tr><td style="padding:0 4px 14px 4px;color:${INK};">${LOGO}</td></tr>
   <tr><td style="background:#ffffff;border-radius:20px;border:1px solid ${LINE};padding:34px 34px 30px 34px;font-family:${FONT};color:${INK};">
-    <div style="font:500 12px ${MONO};letter-spacing:.08em;text-transform:uppercase;color:${MUTE};">${esc(o.eyebrow)}</div>
+    <div style="font:500 13px ${FONT};color:${MUTE};">${esc(o.eyebrow)}</div>
     <h1 style="margin:10px 0 0 0;font:400 28px/1.15 ${FONT};letter-spacing:-.02em;color:${INK};">${o.title}</h1>
     ${o.body}
   </td></tr>
@@ -108,18 +111,18 @@ export const row = (k: string, v: string) =>
   `<tr><td style="padding:9px 0;border-top:1px solid ${LINE};font:13px ${FONT};color:${MUTE};width:96px;vertical-align:top;">${k}</td><td style="padding:9px 0;border-top:1px solid ${LINE};font:14.5px/1.45 ${FONT};color:${INK};">${v}</td></tr>`;
 
 export const button = (href: string, label: string, bg: string, fg = "#ffffff", border = bg) =>
-  `<td style="padding:0 10px 10px 0;"><a href="${esc(href)}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:${bg};border:1px solid ${border};color:${fg};font:600 15px ${FONT};text-decoration:none;">${label}</a></td>`;
+  `<td style="padding:0 10px 10px 0;"><a href="${esc(href)}" style="display:inline-block;padding:14px 28px;border-radius:12px;background:${bg};border:1px solid ${border};color:${fg};font:600 15px ${FONT};text-decoration:none;">${label}</a></td>`;
 
 export function approvalSubject(m: Pick<ApprovalMail, "amount" | "payee" | "id">) {
-  return `Approve ${money(m.amount)} to ${m.payee}? · Request #${m.id}`;
+  return `Approve ${money(m.amount)} to ${m.payee}? (Request #${m.id})`;
 }
 
 export function approvalEmail(m: ApprovalMail): string {
   const expires = friendlyExpiry(m.expiresAt);
   const who = m.agent ? `Your agent <b>${esc(m.agent)}</b>` : "Your agent";
-  const approveBody = `Yes, please go ahead and pay ${money(m.amount)} to ${m.payee}.\n\nJust press Send — the subject line is a secure reference code that ties this reply to request #${m.id}, so there's nothing to change. Thank you!`;
-  const denyBody = `No, please don't pay this one (request #${m.id}).\n\nJust press Send — the subject line is a secure reference code, so there's nothing to change.`;
-  const freezeBody = `Please freeze the vault so no agent can spend until I unfreeze it.\n\nJust press Send — the subject line is a secure reference code, so there's nothing to change.`;
+  const approveBody = `Yes, please go ahead and pay ${money(m.amount)} to ${m.payee}.\n\nJust press Send. The subject line ties this reply to request #${m.id}, so leave it as it is.`;
+  const denyBody = `No, please don't pay this one (request #${m.id}).\n\nJust press Send. Leave the subject line as it is.`;
+  const freezeBody = `Please freeze the vault so no agent can spend until I unfreeze it.\n\nJust press Send. Leave the subject line as it is.`;
 
   const body = `
     <div style="margin:22px 0 4px 0;font:400 44px/1 ${FONT};letter-spacing:-.03em;color:${INK};">${esc(m.amount)} <span style="font:500 16px ${FONT};color:${MUTE};letter-spacing:0;">USDC</span></div>
@@ -135,12 +138,10 @@ export function approvalEmail(m: ApprovalMail): string {
       ${button(mailto(m.inbound, m.approveSubject, approveBody), "Approve payment", GREEN)}
       ${button(mailto(m.inbound, m.denySubject, denyBody), "Deny", "#ffffff", INK, "#cfcfd3")}
     </tr></table>
-    <p style="margin:6px 0 0 0;font:13px/1.6 ${FONT};color:${MUTE};">Tapping a button opens a ready-to-send reply from your Gmail — just press <b>Send</b>.</p>
+    <p style="margin:6px 0 0 0;font:13px/1.6 ${FONT};color:${MUTE};">Each button opens a ready reply in Gmail. Just press <b>Send</b>.</p>
 
-    <div style="margin:26px 0 0 0;padding:18px 20px;background:#f7f7f8;border-radius:14px;font:13.5px/1.65 ${FONT};color:#3a3a3a;">
-      <div style="font:600 13px ${FONT};color:${INK};margin-bottom:6px;">Why does the reply have a code in its subject?</div>
-      It's a one-time reference (<span style="font:12.5px ${MONO};">${esc(m.approveSubject)}</span>) that links your reply to <i>this</i> payment only, so it can never be reused for another one.
-      Google digitally signs every email you send, and the Arc blockchain checks that signature before any money moves — so nobody can approve on your behalf, not even the agent.
+    <div style="margin:26px 0 0 0;padding:16px 20px;background:#f7f7f8;border-radius:14px;font:13.5px/1.6 ${FONT};color:#3a3a3a;">
+      Google signs your reply, and Arc checks that signature before any money moves. Nobody can approve for you, not even the agent.
     </div>
 
     <p style="margin:22px 0 0 0;font:13px/1.6 ${FONT};color:${MUTE};">Something look wrong? Just tap <b>Deny</b>, or <a href="${esc(mailto(m.inbound, m.freezeSubject, freezeBody))}" style="color:${BLUE};">freeze the vault</a> to stop every agent immediately.</p>`;
@@ -156,7 +157,7 @@ export function approvalEmail(m: ApprovalMail): string {
     `  Request:  #${m.id}`,
     `  Expires:  ${expires}`,
     "",
-    "TO APPROVE — reply to this email's sender with exactly this subject, then press Send:",
+    "TO APPROVE: reply to this email's sender with exactly this subject, then press Send:",
     `  ${m.approveSubject}`,
     "",
     "TO DENY:",
@@ -174,7 +175,7 @@ export function approvalEmail(m: ApprovalMail): string {
     subject: approvalSubject(m),
     text,
     html: layout({
-      preheader: `${m.agent ?? "Your agent"} wants to pay ${m.payee}. Tap Approve, then Send — nothing moves until you do.`,
+      preheader: `${m.agent ?? "Your agent"} wants to pay ${m.payee}. Tap Approve, then Send. Nothing moves until you do.`,
       eyebrow: "Approval needed",
       title: "Approve this payment?",
       body,
@@ -188,17 +189,17 @@ const RECEIPT: Record<ReceiptKind, { icon: string; color: string; subject: (r: R
     icon: "✓", color: GREEN,
     subject: (r) => `Payment sent: ${money(r.amount ?? "")} to ${r.payee} ✓`,
     title: () => "Payment sent",
-    lead: (r) => `Thanks — ${money(r.amount ?? "")} has been sent to ${r.payee}. Arc verified Google's signature on your reply before releasing it.`,
+    lead: (r) => `${money(r.amount ?? "")} has been sent to ${r.payee}. Arc verified Google's signature on your reply before releasing it.`,
   },
   denied: {
     icon: "✕", color: INK,
     subject: (r) => `You denied the ${money(r.amount ?? "")} payment to ${r.payee}`,
     title: () => "Payment denied",
-    lead: (r) => `Understood — request #${r.id} will not be paid, and no money moved.`,
+    lead: (r) => `Request #${r.id} will not be paid, and no money moved.`,
   },
   frozen: {
     icon: "❄", color: BLUE,
-    subject: () => "Vault frozen — agents can't spend until you unfreeze it",
+    subject: () => "Vault frozen: agents can't spend until you unfreeze it",
     title: () => "Vault frozen",
     lead: () => "Every agent on this vault is stopped. Only the vault owner can unfreeze it from the Fala dashboard.",
   },
@@ -211,7 +212,7 @@ const RECEIPT: Record<ReceiptKind, { icon: string; color: string; subject: (r: R
   failed: {
     icon: "!", color: "#b86e00",
     subject: (r) => `Approved, but the ${money(r.amount ?? "")} payment couldn't be sent`,
-    title: () => "Approved — but it couldn't be sent",
+    title: () => "Approved, but it couldn't be sent",
     lead: () => "The vault may be underfunded or the payee blocked. Your funds stay safely in the vault, and this request is now closed. Top up the vault and ask the agent to try again.",
   },
   duplicate: {
@@ -221,7 +222,7 @@ const RECEIPT: Record<ReceiptKind, { icon: string; color: string; subject: (r: R
     lead: (r) => {
       const what = r.amount ? `the ${money(r.amount)} payment${r.payee ? ` to ${r.payee}` : ""}` : "this payment";
       switch (r.status) {
-        case "APPROVED": return `Request #${r.id} was already approved — ${what} was sent earlier. There's no need to reply again.`;
+        case "APPROVED": return `Request #${r.id} was already approved, and ${what} was sent earlier. There's no need to reply again.`;
         case "DENIED": return `Request #${r.id} was already denied, so ${what} was not made. There's no need to reply again.`;
         case "EXPIRED": return `Request #${r.id} expired before it was answered, so ${what} was not made.`;
         case "CANCELLED": return `Request #${r.id} was cancelled, so ${what} was not made.`;
@@ -259,7 +260,7 @@ export function receiptEmail(r: ReceiptMail): string {
       eyebrow: r.kind === "refused" || r.kind === "failed" ? "Heads up" : r.kind === "duplicate" ? "No action needed" : "Update",
       title: `<span style="color:${k.color};">${k.icon}</span>&nbsp;${esc(k.title(r))}`,
       body,
-      footer: "You're getting this receipt because you replied to a Fala approval request. Questions? Just ignore this email — nothing else is needed.",
+      footer: "You're getting this receipt because you replied to a Fala approval request. Nothing else is needed.",
     }),
   });
 }
