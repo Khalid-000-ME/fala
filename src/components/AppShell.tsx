@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PiArrowLeft } from "react-icons/pi";
+import { PiArrowLeft, PiMoon, PiSun } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -20,7 +20,15 @@ function ThemeToggle() {
     else delete document.documentElement.dataset.theme;
     try { localStorage.setItem("fala-theme", next ? "light" : "dark"); } catch {}
   };
-  return <button className="cap text-left hover:text-ink" onClick={flip}>{light ? "Dark mode" : "Light mode"}</button>;
+  return (
+    <button role="switch" aria-checked={light} aria-label="Light theme" onClick={flip} className="relative h-7 w-14 shrink-0 rounded-full border border-line bg-card transition">
+      <PiMoon size={13} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-mute" aria-hidden />
+      <PiSun size={13} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-mute" aria-hidden />
+      <span className={`absolute left-0.5 top-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-canvas transition-transform duration-200 ${light ? "translate-x-7" : ""}`}>
+        {light ? <PiSun size={13} aria-hidden /> : <PiMoon size={13} aria-hidden />}
+      </span>
+    </button>
+  );
 }
 
 /** Sidebar layout for every signed-in page. Becomes a top bar on small screens. */
