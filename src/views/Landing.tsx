@@ -20,28 +20,24 @@ export default function Landing() {
 
   return (
     <main>
-      <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden">
+      <section className="relative flex min-h-[100vh] items-center justify-center overflow-hidden bg-[#030712]">
         <div className="absolute inset-0" aria-hidden>
-          {/* colors run dark to bright: the dark end is the shadow and stays transparent. */}
           <GradientASCII
-            lightMode
-            colors={["#1e3fd8", "#7a5cff", "#e8527a", "#ffe3ee"]}
+            colors={["#0b1f6b", "#1e3fd8", "#2f6bff", "#7db4ff"]}
             shape="horizon"
+            characters=" =+xX0S8#@"
             cellSize={18}
             density={0.8}
-            glyphOpacity={0.85}
-            gradientOpacity={0.9}
-            speed={0.6}
           />
-          {/* A soft pool of white behind the words only, so the art still reads at the edges. */}
-          <div className="absolute inset-0 [background:radial-gradient(ellipse_52%_46%_at_50%_50%,rgba(255,255,255,.88)_0%,rgba(255,255,255,.55)_45%,rgba(255,255,255,0)_100%)]" />
+          {/* Dims the art behind the words so they stay readable. */}
+          <div className="absolute inset-0 [background:radial-gradient(ellipse_55%_45%_at_50%_50%,rgba(3,7,18,.75)_0%,rgba(3,7,18,.4)_55%,rgba(3,7,18,0)_100%)]" />
         </div>
         <div className="rise wrap relative z-10 flex flex-col items-center text-center">
-          <div className="cap mb-6">Spending vaults for AI agents on Arc</div>
-          <h1 className="h-display max-w-4xl">Let your agents spend. Approve from your inbox.</h1>
-          <p className="lede mt-7">Your agent pays small amounts on its own. Anything bigger needs one reply from Gmail.</p>
+          <div className="cap mb-6 !text-white/60">Spending vaults for AI agents on Arc</div>
+          <h1 className="h-display max-w-4xl text-white">Let your agents spend. Approve from your inbox.</h1>
+          <p className="lede mt-7 !text-white/70">Your agent pays small amounts on its own. Anything bigger needs one reply from Gmail.</p>
           <div className="mt-9">
-            <button className="btn" disabled={!ready} onClick={() => login()}>
+            <button className="btn !bg-white !text-ink" disabled={!ready} onClick={() => login()}>
               {ready ? "Sign in with Google" : "Loading"}
             </button>
           </div>
