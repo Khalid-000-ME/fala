@@ -4,13 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import GradientASCII from "../components/reactbits/GradientASCII";
 import { GoogleIcon } from "../components/Icons";
+import { LandingStory } from "../components/LandingStory";
 import { useAuth } from "../hooks/useAuth";
-
-const STEPS = [
-  ["Your agent asks", "Small payments go through on their own. Bigger ones wait."],
-  ["You get an email", "Tap Approve and press send. Nothing else to install."],
-  ["Arc checks Google", "The vault verifies Gmail's signature on chain, then pays."],
-] as const;
 
 export default function Landing() {
   const { ready, authenticated, login } = useAuth();
@@ -44,18 +39,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-      <section className="wrap py-20 sm:py-28">
-        <ol className="grid gap-10 sm:grid-cols-3">
-          {STEPS.map(([title, body], i) => (
-            <li key={title}>
-              <div className="cap">{String(i + 1).padStart(2, "0")}</div>
-              <h2 className="mt-3 text-[24px] tracking-tightest">{title}</h2>
-              <p className="cap mt-2 md:text-[13px]">{body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <LandingStory onStart={login} ready={ready} />
     </main>
   );
 }
