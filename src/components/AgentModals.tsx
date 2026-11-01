@@ -158,7 +158,7 @@ export function ConnectAgent({ agent, onClose, onDone }: { agent: AgentDto | nul
           <Code>{k.key}</Code>
           <div className="flex gap-2">
             {(["claude", "cursor", "http"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} className={`tag rounded-full px-4 py-1.5 ${tab === t ? "bg-ink text-canvas" : "bg-card text-mute"}`}>{t === "claude" ? "Claude" : t === "cursor" ? "Cursor" : "HTTP"}</button>
+              <button key={t} onClick={() => setTab(t)} className={`tag rounded-xl px-4 py-1.5 ${tab === t ? "bg-ink text-canvas" : "bg-card text-mute"}`}>{t === "claude" ? "Claude" : t === "cursor" ? "Cursor" : "HTTP"}</button>
             ))}
           </div>
           {tab === "claude" && <><div className="cap">Claude Code</div><Code>{k.claudeCode}</Code><div className="cap">Claude Desktop (claude_desktop_config.json)</div><Code>{desktop!}</Code></>}

@@ -119,7 +119,7 @@ export function Activity({ events, loading }: { events: FeedEvent[]; loading: bo
     <Section id="activity" title="Activity">
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {kinds.map((k) => (
-          <button key={k} onClick={() => setKind(k)} className={`tag rounded-full px-4 py-1.5 transition ${kind === k ? "bg-ink text-canvas" : "bg-card text-mute hover:text-ink"}`}>
+          <button key={k} onClick={() => setKind(k)} className={`tag rounded-xl px-4 py-1.5 transition ${kind === k ? "bg-ink text-canvas" : "bg-card text-mute hover:text-ink"}`}>
             {k === "all" ? "All" : KIND[k].label}
           </button>
         ))}

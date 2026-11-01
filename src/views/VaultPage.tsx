@@ -104,7 +104,7 @@ function Banners({ v, owner, isOwner, onDone }: { v: VaultDto; owner: ReturnType
       {v.frozen && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-card bg-[#0b2a5b] px-8 py-6 text-white">
           <div><div className="text-[24px] tracking-tightest">Vault frozen</div></div>
-          <button className="rounded-full bg-white px-5 py-2.5 text-[14px] text-[#030712] disabled:opacity-40" disabled={!isOwner} onClick={async () => (await owner.write(v.address, "unfreeze", [], "Unfreeze")) && onDone()}>Unfreeze</button>
+          <button className="rounded-xl bg-white px-5 py-2.5 text-[14px] text-[#030712] disabled:opacity-40" disabled={!isOwner} onClick={async () => (await owner.write(v.address, "unfreeze", [], "Unfreeze")) && onDone()}>Unfreeze</button>
         </div>
       )}
       {v.belowMin && (
