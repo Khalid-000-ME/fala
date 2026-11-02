@@ -27,6 +27,7 @@ tsconfig.tsbuildinfo
 
 # screen recordings: source exports stay local
 export-*.mp4
+
 .vercel
 .env*
 # the examples carry no values and document what each deployment needs
