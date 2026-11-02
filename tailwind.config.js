@@ -7,6 +7,7 @@ export default {
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        brand: ["var(--font-brand)", "var(--font-sans)", "sans-serif"],
       },
       borderRadius: { card: "20px", tile: "40px" },
       letterSpacing: { tightest: "-0.035em" },
