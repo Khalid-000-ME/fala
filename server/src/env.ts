@@ -16,7 +16,13 @@ export const env = {
   deployerKey: () => hex(need("DEPLOYER_PRIVATE_KEY")),
   relayerKey: () => hex(need("RELAYER_PRIVATE_KEY")),
   network: opt("NETWORK", "testnet") as "local" | "testnet" | "mainnet",
-  rpc: opt("RPC_URL", "https://rpc.testnet.arc.io"),
+  /**
+   * ARC_RPC wins over RPC_URL so the endpoint can be set in fly.toml beside NETWORK, without
+   * touching the secret store. Falling back by network keeps the two from ever disagreeing.
+   */
+  get rpc(): string {
+    return opt("ARC_RPC") || opt("RPC_URL") || (this.network === "mainnet" ? "https://rpc.mainnet.arc.io" : "https://rpc.testnet.arc.io");
+  },
   port: Number(opt("PORT", "8787")),
   publicUrl: opt("PUBLIC_URL", "http://localhost:8787"),
   /**
