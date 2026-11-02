@@ -1,0 +1,19 @@
+# Only the Next app is deployed here. The server runs on Fly and the rest never reaches the browser,
+# so excluding them keeps the upload under Vercel's 100 MB per-file limit and makes deploys quick.
+
+# Screen recording source exports: the trimmed clip in public/media is what ships.
+export-*.mp4
+
+# Other workspaces, each with their own node_modules and binaries.
+server
+worker
+agent
+contracts
+
+# Repo material with no part in the build.
+docs
+prompts
+.github
+.vscode
+*.db
+SECURITY_REVIEW.md
