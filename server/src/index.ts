@@ -5,7 +5,7 @@ import { env } from "./env.js";
 import { migrate } from "./db.js";
 import { api, v1 } from "./routes.js";
 import { handleMcp } from "./mcp.js";
-import { startRelay } from "./relay.js";
+import { relayEnabled, relayPass, startRelay } from "./relay.js";
 
 await migrate();
 const app = new Hono();
@@ -22,6 +22,17 @@ app.post("/debug/client-error", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   console.log("[client-error]", JSON.stringify(body, null, 2));
   return c.json({ ok: true });
+});
+/**
+ * Runs one relay sweep on demand. A cron calls this where the host stops an idle machine,
+ * so the relay still reads replies without a process resident around the clock.
+ */
+app.post("/relay/tick", async (c) => {
+  if (c.req.header("authorization") !== `Bearer ${env.secret()}`) return c.json({ error: "unauthorized" }, 401);
+  if (!relayEnabled()) return c.json({ error: "relay disabled: set RELAY_GMAIL and RELAY_APP_PASSWORD" }, 503);
+  const t = Date.now();
+  const result = await relayPass();
+  return c.json({ ok: true, ms: Date.now() - t, ...result });
 });
 app.all("/mcp", (c) => handleMcp(c.req.raw));
 app.route("/", v1);

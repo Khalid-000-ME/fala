@@ -128,13 +128,32 @@ async function checkBalances() {
   }
 }
 
+export const relayEnabled = () => Boolean(env.relayGmail() && env.relayPass());
+
+let passRunning = false;
+
+/**
+ * One sweep of the relay's work: mail out pending approvals, read replies, warn on low balances.
+ * Exported so a cron can drive the relay by request where a resident process is not affordable.
+ * A step that throws is logged and skipped, because one bad vault must not stop the others.
+ */
+export async function relayPass() {
+  if (passRunning) return { skipped: "a pass is already running" };
+  passRunning = true;
+  const errors: Record<string, string> = {};
+  try {
+    for (const step of [notifyPending, readInbox, checkBalances]) {
+      try { await step(); } catch (e) { errors[step.name] = (e as Error).message; log(`${step.name} error: ${(e as Error).message}`); }
+    }
+  } finally { passRunning = false; }
+  return { ran: ["notifyPending", "readInbox", "checkBalances"], errors };
+}
+
 export function startRelay() {
-  if (!env.relayGmail() || !env.relayPass()) return log("mail relay disabled (set RELAY_GMAIL and RELAY_APP_PASSWORD)");
+  if (!relayEnabled()) return log("mail relay disabled (set RELAY_GMAIL and RELAY_APP_PASSWORD)");
   log(`running — shared inbox ${env.relayGmail()}`);
   const loop = async () => {
-    for (const step of [notifyPending, readInbox, checkBalances]) {
-      try { await step(); } catch (e) { log(`${step.name} error: ${(e as Error).message}`); }
-    }
+    await relayPass();
     setTimeout(loop, 15_000);
   };
   loop();
