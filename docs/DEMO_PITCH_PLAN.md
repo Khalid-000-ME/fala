@@ -80,9 +80,14 @@ They are also served at `https://fala-approve.vercel.app/media/fala/clips/<name>
 - **Say:** "The accessibility is the point. The guardrails are table stakes."
 
 ### Slide 9 — Built on Arc
-- **Headline:** USDC is the gas token.
-- **Body:** Fala runs on Arc, where payments and fees are both USDC. No second token to hold, no conversion step between approving and paying.
-- **Say:** "That matters for the story — the thing you approve and the thing that pays the fee are the same unit."
+- **Visual:** three mono numbers in a row, each with a one-line label under it.
+- **Headline:** Only possible because Arc makes it cheap.
+- **Numbers:**
+  - **0.011 USDC** — cost of one on-chain approval (533,230 gas for the RSA-2048 check)
+  - **0.1116 USDC** — cost to deploy a whole vault, so every user gets their own contract
+  - **USDC** — is the gas token, so the thing you approve and the thing that pays the fee are the same unit
+- **Say:** "On a chain with ordinary gas economics this design does not ship — you'd be forced into a zero-knowledge circuit. Arc's modexp precompile makes the direct RSA check cost about a cent, and that is the whole reason Fala can be this simple."
+- **Note for builder:** these three numbers are measured on-chain, not estimated. They are the strongest technical claim in the deck.
 
 ---
 
@@ -155,13 +160,42 @@ This is the payoff. Slow down.
 
 ## Act 5 — Proof and close (slides 20–23)
 
-### Slide 20 — This is real, and it is running
-- **Visual:** a table, mono for all hashes and addresses.
-- **Numbers (all measured or on-chain, safe to show):**
-  - Vault contract: `0xfcf31860d0ef159b7967a72b37bc4b2104d5f127`, Arc testnet (chain 5042002), block 69628054
-  - A real Gmail reply already released a live payment: tx `0x8fbe3ea6…f3adb`
-  - 64 contract tests, 17 relay tests
-  - Live app: `https://fala-approve.vercel.app`
+### Slide 20 — Live on Arc mainnet
+- **Visual:** a plain table, mono for every address and hash. No decoration — this slide's job is to be checkable.
+- **Headline:** Deployed on Arc mainnet.
+- **Table:**
+
+  | | |
+  |---|---|
+  | FalaVault | `0xE20D31af287e546A35897FD65a822f3dEF7FA008` |
+  | Deploy tx | `0x19f32caa…ab72` |
+  | Chain / block | Arc mainnet 5042 · block 29095348 |
+  | Cost to deploy | 5,577,308 gas = 0.1116 USDC |
+  | DKIM key | `gmail.com` selector `20260707` — Google's real production key |
+  | Approver | stored only as `keccak256`; the address is never on-chain |
+  | Tests | 64 contract tests · 17 relay tests |
+  | App | `https://fala-approve.vercel.app` |
+
+- **Say:** "This is deployed and verifiable right now. The key it checks against is Google's real production key, not a stand-in we control."
+
+### Slide 20b — Verify it without trusting us
+- **Visual:** four mono command lines, each with its result beneath in muted text. Let it look like a terminal, not a slide.
+- **Headline:** Don't take our word for it.
+- **Commands:**
+  ```
+  cast call $V "approverHash()(bytes32)"   → 0xca56b56b…3d0c
+  cast keccak "fala.approver.1@gmail.com"  → the same value
+  cast call $V "getKeyIds()(bytes32[])"    → 0x15234f80…712b
+  dig +short TXT 20260707._domainkey.gmail.com
+                                           → Google's key, same modulus
+  ```
+- **Say:** "That last line is the point. The key the contract verifies against is the one Google publishes in DNS, byte for byte. Anyone in this room can run these four commands."
+- **Note for builder:** this is the single most persuasive slide in the deck for a technical judge. Do not compress it into slide 20.
+
+### Slide 20c — A real reply has already moved real money
+- **Visual:** the receipt still from `13-payment-receipt.jpg`, with one line of text.
+- **Headline:** 2.00 USDC, released by an email.
+- **Body:** A reply from a real Gmail account was verified against Google's own signature and released 2.00 USDC. 533,230 gas. Roughly one cent.
 - **Say:** "Every approval you just watched was a real email and a real transaction. None of it is mocked."
 
 ### Slide 21 — How it holds up
@@ -174,9 +208,13 @@ This is the payoff. Slow down.
 - **Say:** "Most of the engineering went into the failure cases, not the happy path."
 
 ### Slide 22 — What's next
-- **Headline:** Mainnet.
-- **Body:** The contract, relay and app are deployed and working on Arc testnet against Google's real signing key. Mainnet is the next deployment, not the next rewrite.
-- **Say:** Keep this honest and short. Do not promise features.
+- **Headline:** More signers, more approvers.
+- **Body:**
+  - Outlook and Google Workspace keys, so approval is not Gmail-only.
+  - Two-of-three approvers for team spend.
+  - Approval ceilings in the subject line: `FALA APPROVE UP TO 5`.
+  - An SDK, so any agent framework can hold a budget.
+- **Say:** Keep this short. Do not oversell — the deployed thing is the argument.
 
 ### Slide 23 — Close
 - **Visual:** logo tile, centred, black. One line.
