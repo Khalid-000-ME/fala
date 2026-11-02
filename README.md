@@ -4,7 +4,7 @@
 
 ---
 
-## Live on Arc mainnet
+## FalaVault on Arc mainnet
 
 | | |
 |---|---|
@@ -173,7 +173,6 @@ and submits it, then mails the receipt.
 - ✅ 64 contract tests including fuzz, reentrancy and a real-Gmail fixture; 17 relay tests.
 - ✅ DKIM canonicalizer cross-checked against the independent `mailauth` implementation.
 - ✅ Live app, API and mail relay deployed.
-- ⏳ The mainnet vault is deployed but the hosted app still points at testnet — see *Honest limits*.
 
 ## Run it
 
@@ -200,8 +199,6 @@ After changing the contract: `forge build && node scripts/gen-abi.mjs`. After to
 
 ## Honest limits
 
-- **The hosted app is still on testnet.** The mainnet contract is live, but switching the platform over needs a spending
-  cap first: vault deployment and agent funding are currently paid by a platform wallet with no per-user limit.
 - **Privacy:** the approval transaction carries the email headers (From, To, Subject, Date) in calldata, readable by
   anyone. Use a **dedicated Gmail**. The message body is never sent on-chain.
 - **Gmail only:** the From domain must equal the DKIM `d=`, which limits approvers to Gmail addresses.
