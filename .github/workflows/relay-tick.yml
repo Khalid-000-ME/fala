@@ -3,11 +3,11 @@
 name: relay tick
 
 on:
-  # The schedule is off while this repository is private: Actions would bill every run against
-  # the 2,000 free monthly minutes, and a five-minute tick needs about 8,600. Uncomment it once
-  # the repository is public, where scheduled runs are free.
-  # schedule:
-  #   - cron: "*/5 * * * *"
+  schedule:
+    # Every five minutes, the shortest interval GitHub accepts. Free only while this repository
+    # is public; going private would bill about 8,600 minutes a month against the free 2,000.
+    # Runs are often late at busy times, so treat the interval as a floor, not a guarantee.
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 # A late run must not pile up behind the one before it.
