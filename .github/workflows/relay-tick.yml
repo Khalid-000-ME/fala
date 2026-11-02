@@ -1,0 +1,37 @@
+# Wakes the server and runs one relay sweep: approval mail out, replies in, low-balance warnings.
+# The machine sleeps between ticks, so this is what keeps email approvals flowing.
+name: relay tick
+
+on:
+  schedule:
+    # Every five minutes, the shortest interval GitHub accepts. Runs are often late at busy times.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# A late run must not pile up behind the one before it.
+concurrency:
+  group: relay-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run one relay sweep
+        env:
+          SERVER_SECRET: ${{ secrets.FALA_SERVER_SECRET }}
+        run: |
+          if [ -z "$SERVER_SECRET" ]; then
+            echo "FALA_SERVER_SECRET is not set in this repository's secrets."
+            exit 1
+          fi
+          # The first request wakes the machine from sleep, so allow for a cold start.
+          code=$(curl -sS -o body.txt -w '%{http_code}' \
+            --max-time 120 --retry 3 --retry-connrefused --retry-delay 5 \
+            -X POST https://fala-server.fly.dev/relay/tick \
+            -H "authorization: Bearer $SERVER_SECRET")
+          echo "HTTP $code"
+          # The body reports per-step errors, so print it either way.
+          cat body.txt; echo
+          [ "$code" = "200" ]
