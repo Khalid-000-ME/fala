@@ -1,4 +1,5 @@
-# The relay polls IMAP and the chain every 15s, so this machine must never stop.
+# The machine sleeps when idle and wakes on a request. A trial account stops a machine after
+# five minutes anyway, so the relay runs by request on /relay/tick instead of a resident loop.
 app = "fala-server"
 primary_region = "iad"
 
@@ -10,20 +11,15 @@ primary_region = "iad"
   NETWORK = "testnet"
   DB_URL = "file:/data/fala.db"
   AGENT_GAS_USDC = "0.3"
+  # No resident relay loop: an awake machine costs money, and /relay/tick covers the work.
+  RELAY = "0"
 
 [http_service]
   internal_port = 8787
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
-
-  [[http_service.checks]]
-    grace_period = "20s"
-    interval = "30s"
-    timeout = "5s"
-    method = "GET"
-    path = "/health"
+  min_machines_running = 0
 
 [mounts]
   source = "fala_data"
