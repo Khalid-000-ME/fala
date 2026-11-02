@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import GradientASCII from "../components/reactbits/GradientASCII";
+import { Logo } from "../components/Chrome";
 import { GoogleIcon } from "../components/Icons";
 import { LandingStory } from "../components/LandingStory";
 import { useAuth } from "../hooks/useAuth";
@@ -71,13 +72,14 @@ export default function Landing() {
 
           {/* The opening pitch sits in the top of the screen so the video can peek in below it. */}
           <div
-            className="absolute inset-x-0 top-[13vh] z-20 flex flex-col items-center px-5 text-center"
+            className="absolute inset-x-0 top-[8vh] z-20 flex flex-col items-center px-5 text-center"
             style={{ transform: `translateY(${-p * 120}px)`, opacity: intro, pointerEvents: intro < 0.1 ? "none" : "auto" }}
           >
-            <div className="cap !text-white/60">Email approvals for AI agents</div>
-            <h1 className="mt-5 max-w-5xl font-normal leading-[1.04] tracking-tightest text-white" style={{ fontSize: "min(7vw, 9vh)" }}>Approve your agent's payments from Gmail.</h1>
-            <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-white/70">No wallet app. No dashboard. Your agent emails you, you reply, and it's paid.</p>
-            <button className="btn mt-7 !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>{signIn}</button>
+            <Logo light />
+            <div className="cap mt-6 !text-white/60">Email approvals for AI agents</div>
+            <h1 className="mt-4 max-w-5xl font-normal leading-[1.04] tracking-tightest text-white" style={{ fontSize: "min(6.4vw, 8vh)" }}>Approve your agent's payments from Gmail.</h1>
+            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-white/70">No wallet app. No dashboard. Your agent emails you, you reply, and it's paid.</p>
+            <button className="btn mt-6 !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>{signIn}</button>
           </div>
 
           {/* Title and video share one column, so their edges line up. */}
@@ -88,7 +90,8 @@ export default function Landing() {
 
           {/* The recording peeks in at rest and settles fully inside the screen. */}
           <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2" style={{ width: VIDEO_W }}>
-            <div style={{ transform: `translateY(calc(${(1 - rise) * 76}vh + ${rise * 96}px))` }}>
+            {/* Sits just under the pitch at rest, so the recording is visible without scrolling. */}
+            <div style={{ transform: `translateY(calc(${(1 - rise) * 64}vh + ${rise * 96}px))` }}>
               <video
                 className="block w-full rounded-card border border-white/15 shadow-[0_30px_80px_rgba(0,0,0,.6)]"
                 autoPlay muted loop playsInline preload="metadata"
