@@ -18,11 +18,12 @@ const usdc = (v: bigint | number) => (Number(v) / 1e6).toString();
 const gmail = z.string().trim().toLowerCase().email().refine((e) => e.endsWith("@gmail.com"), "the approver must be a Gmail address (@gmail.com)");
 const bad = (c: any, e: unknown) => c.json({ error: e instanceof z.ZodError ? e.issues.map((i) => i.message).join("; ") : (e as Error).message }, 400);
 
+// A vault only exists on the chain it was deployed to, so every lookup is scoped to the active network.
 async function ownVault(c: any, vaultId: string) {
-  return one<any>(`SELECT * FROM vaults WHERE id=? AND user_id=?`, [vaultId, c.get("me").id]);
+  return one<any>(`SELECT * FROM vaults WHERE id=? AND user_id=? AND network=?`, [vaultId, c.get("me").id, env.network]);
 }
 async function ownAgent(c: any, agentId: string) {
-  return one<any>(`SELECT a.*, v.address AS vault_address, v.user_id FROM agents a JOIN vaults v ON v.id=a.vault_id WHERE a.id=? AND v.user_id=?`, [agentId, c.get("me").id]);
+  return one<any>(`SELECT a.*, v.address AS vault_address, v.user_id FROM agents a JOIN vaults v ON v.id=a.vault_id WHERE a.id=? AND v.user_id=? AND v.network=?`, [agentId, c.get("me").id, env.network]);
 }
 
 async function vaultView(v: any) {
@@ -46,15 +47,24 @@ api.post("/api/vaults", async (c) => {
   let body;
   try { body = newVault.parse(await c.req.json()); } catch (e) { return bad(c, e); }
   const me = c.get("me");
+  // Deploying costs the platform wallet real money on mainnet, so refuse before spending any.
+  const allowed = env.allowedApprovers();
+  if (allowed.length && !allowed.includes(body.approverEmail.toLowerCase()))
+    return c.json({ error: "this approver address is not on the access list for this deployment" }, 403);
+  if (env.maxVaultsPerUser) {
+    const mine = await one<any>(`SELECT COUNT(*) AS n FROM vaults WHERE user_id=? AND network=?`, [me.id, env.network]);
+    if (Number(mine?.n ?? 0) >= env.maxVaultsPerUser)
+      return c.json({ error: `you've reached the limit of ${env.maxVaultsPerUser} vaults on this deployment` }, 403);
+  }
   const d = await deployVault(me.wallet as Address, body.approverEmail);
   const vid = id();
-  await run(`INSERT INTO vaults (id,user_id,name,address,deploy_block,approver_email,min_balance,owner_address,deploy_tx,cursor,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [vid, me.id, body.name, d.address, d.block, body.approverEmail, Math.round(body.minBalance * 1e6), me.wallet, d.tx, d.block, now()]);
+  await run(`INSERT INTO vaults (id,user_id,name,address,deploy_block,approver_email,min_balance,owner_address,deploy_tx,cursor,created_at,network) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [vid, me.id, body.name, d.address, d.block, body.approverEmail, Math.round(body.minBalance * 1e6), me.wallet, d.tx, d.block, now(), env.network]);
   return c.json(await vaultView((await one(`SELECT * FROM vaults WHERE id=?`, [vid]))!), 201);
 });
 
 api.get("/api/vaults", async (c) => {
-  const rows = await all<any>(`SELECT * FROM vaults WHERE user_id=? ORDER BY created_at DESC`, [c.get("me").id]);
+  const rows = await all<any>(`SELECT * FROM vaults WHERE user_id=? AND network=? ORDER BY created_at DESC`, [c.get("me").id, env.network]);
   return c.json(await Promise.all(rows.map(vaultView)));
 });
 

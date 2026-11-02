@@ -27,6 +27,13 @@ export const env = {
   origins: () => (opt("WEB_ORIGINS") || opt("WEB_ORIGIN") || "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean),
   get webOrigin() { return this.origins()[0]; },
   agentGas: opt("AGENT_GAS_USDC", "0.3"),
+  /**
+   * Vault deploys and agent gas floats are paid by the platform wallet, so on a real-money network
+   * an open sign-up drains it. Empty means no limit, which is only safe on testnet.
+   * MAX_VAULTS_PER_USER caps how many vaults one account can deploy at our expense.
+   */
+  allowedApprovers: () => opt("ALLOWED_APPROVERS").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
+  maxVaultsPerUser: Number(opt("MAX_VAULTS_PER_USER", "0")) || 0,
   groqKey: () => opt("GROQ_API_KEY"),
   model: () => opt("MODEL", "openai/gpt-oss-120b"),
   relayGmail: () => opt("RELAY_GMAIL"),

@@ -38,7 +38,7 @@ const deps = (v: any, dry: boolean) => {
 async function handleReply(raw: Uint8Array) {
   let from = "";
   try { from = parseEmail(raw, { domain: "gmail.com" }).from; } catch { return log("ignored: no usable Gmail DKIM signature"); }
-  const vaults = await all<any>(`SELECT * FROM vaults WHERE approver_email = ?`, [from]);
+  const vaults = await all<any>(`SELECT * FROM vaults WHERE approver_email = ? AND network = ?`, [from, env.network]);
   if (!vaults.length) return log(`ignored: ${from} is not the approver of any vault`);
 
   // The code in the subject binds a reply to one vault; find the vault whose contract accepts it.
@@ -86,7 +86,7 @@ async function readInbox() {
 
 async function notifyPending() {
   const tip = await publicClient.getBlockNumber();
-  for (const v of await all<any>(`SELECT * FROM vaults`)) {
+  for (const v of await all<any>(`SELECT * FROM vaults WHERE network = ?`, [env.network])) {
     let from = BigInt(v.cursor);
     while (from <= tip) {
       const to = from + WINDOW - 1n < tip ? from + WINDOW - 1n : tip;
@@ -114,7 +114,7 @@ async function notifyPending() {
 
 /** Low-balance alert: at most once a day per vault, and re-armed as soon as the vault is topped up. */
 async function checkBalances() {
-  for (const v of await all<any>(`SELECT * FROM vaults WHERE min_balance > 0`)) {
+  for (const v of await all<any>(`SELECT * FROM vaults WHERE min_balance > 0 AND network = ?`, [env.network])) {
     const st = await vaultState(v.address).catch(() => undefined);
     if (!st) continue;
     const bal = Number(st.balance);

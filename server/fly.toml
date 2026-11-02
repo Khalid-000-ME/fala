@@ -15,6 +15,10 @@ primary_region = "iad"
   RELAY = "0"
   # Origins allowed to call the API; the first is the one approval emails link to.
   WEB_ORIGINS = "https://fala-approve.vercel.app,http://localhost:3000"
+  # Vault deploys and agent floats come out of the platform wallet, so bound what one account can spend.
+  MAX_VAULTS_PER_USER = "5"
+  # On mainnet also set ALLOWED_APPROVERS to a comma-separated list, or sign-ups are an open tap.
+  # ALLOWED_APPROVERS = "fala.approver.1@gmail.com"
 
 [http_service]
   internal_port = 8787
