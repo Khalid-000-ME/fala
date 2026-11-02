@@ -1,3 +1,5 @@
+<img src="public/media/fala/brand/banner.png" alt="Fala — built on Arc mainnet" width="100%">
+
 # Fala
 
 **Your agent asks. You reply from Gmail. Arc checks Google's signature and pays.**
@@ -81,6 +83,13 @@ flowchart LR
 **What is trusted:** only header lines inside the block Google signed. Never the body. Never anything the relay adds.
 The relay cannot change the payee or the amount — both come from the intent already stored on-chain.
 
+|  |  |
+|---|---|
+| ![The approval request in Gmail](public/media/fala/clips/11-approval-email.jpg) | ![Replying FALA APPROVE](public/media/fala/clips/12-reply-approve.jpg) |
+| The agent asks. An ordinary email, in an ordinary inbox. | The reply is the signature. Tap Approve, press Send. |
+| ![The payment receipt](public/media/fala/clips/13-payment-receipt.jpg) | ![The transaction on Arc](public/media/fala/clips/14-arc-onchain.jpg) |
+| A receipt lands in the same thread. | And the payment is on Arc, signature checked. |
+
 ### Why the reply cannot be faked
 
 A prompt-injected agent can write any email it wants. **It cannot make Google sign one from you.**
@@ -149,6 +158,19 @@ One detail worth keeping: in run 2 Studio **refused to deploy**. The platform ma
 could see, so it received the literal text `[REDACTED_EMAIL]`, and it would not guess — the address is hashed into the
 contract at construction and cannot be edited afterwards without an owner transaction. It asked rather than assumed. The
 mainnet deployment in this README was then done directly with Foundry against the same reviewed contract.
+
+## Setting one up
+
+Sign in with Google and an embedded wallet is created for you — no install, no seed phrase.
+
+|  |  |
+|---|---|
+| ![Creating a vault](public/media/fala/clips/03-create-vault.jpg) | ![Setting the agent's limits](public/media/fala/clips/07-agent-limits.jpg) |
+| A vault is a real contract deployment, not a database row. Name it, pick the Gmail that approves, set a minimum balance. | Connect Claude, ChatGPT or Cursor, then set the ceiling: per payment, per day, and a largest request it cannot even ask above. |
+| ![The vault overview](public/media/fala/clips/10-vault-overview.jpg) | ![Vault settings](public/media/fala/clips/09-settings.jpg) |
+| Balance, wallet, requests waiting, agents. | The approver inbox and the vault's own address. |
+
+From here the human does nothing until an email arrives.
 
 ## Project layout
 
