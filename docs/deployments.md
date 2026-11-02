@@ -1,5 +1,35 @@
 # Deployments
 
+## Arc mainnet (chain 5042)
+
+| Item | Value |
+|---|---|
+| FalaVault | [`0xE20D31af287e546A35897FD65a822f3dEF7FA008`](https://explorer.arc.io/address/0xE20D31af287e546A35897FD65a822f3dEF7FA008) |
+| Deploy tx | [`0x19f32caa…ab72`](https://explorer.arc.io/tx/0x19f32caa0fb3c4f9f1b33e1546711afa5ad4d7392c34cdef3546fb2e5df7ab72) |
+| Block | 29095348 |
+| Gas used / cost | 5,577,308 @ 21 gwei = **0.1116 USDC** |
+| Owner | `0xE79aB0DAFb928629fCDDC5bd2c9e99769Bebb6C2` |
+| Approver | `fala.approver.1@gmail.com` (stored only as `keccak256`) |
+| DKIM key | `gmail.com` / `20260707` — Google's real key, 2048-bit |
+
+Verified on-chain after deploy:
+
+| Check | Result |
+|---|---|
+| `owner()` | `0xE79aB0DAFb928629fCDDC5bd2c9e99769Bebb6C2` ✅ |
+| `approverHash()` | `0xca56b56b…3d0c` = `keccak256("fala.approver.1@gmail.com")` ✅ |
+| `getKeyIds()` | `0x15234f80…712b` = `keccak256(abi.encode(keccak256("gmail.com"), keccak256("20260707")))` ✅ |
+| Google's live DNS key | `dig TXT 20260707._domainkey.gmail.com` modulus matches the registered `n` byte for byte ✅ |
+
+Reproduce the last check:
+
+```bash
+V=0xE20D31af287e546A35897FD65a822f3dEF7FA008; R=https://rpc.mainnet.arc.io
+cast call $V "approverHash()(bytes32)" --rpc-url $R
+cast keccak "fala.approver.1@gmail.com"      # must be equal
+cast call $V "getKeyIds()(bytes32[])" --rpc-url $R
+```
+
 ## Arc testnet (chain 5042002)
 
 ### Primary — deployed through Arc Studio, trusts Google's real DKIM key
