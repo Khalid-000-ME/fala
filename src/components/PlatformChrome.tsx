@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { stallHint, useAuth } from "../hooks/useAuth";
-import { Logo, NetworkBadge } from "./Chrome";
+import { Logo, DemoBadge } from "./Chrome";
 import { GoogleIcon } from "./Icons";
 
 /** Scroll state: `shown` hides the bar over the landing hero, `wide` stretches it from a minimal bar to its full 1100px width. */
@@ -49,7 +49,7 @@ export function PlatformHeader() {
           </nav>
         )}
         <div className="flex items-center gap-3">
-          <NetworkBadge />
+          <DemoBadge />
           {ready && authenticated ? (
             <button className="btn-ghost btn btn-sm" title="Sign out" onClick={async () => { await logout(); router.push("/"); }}>
               Sign out

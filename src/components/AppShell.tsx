@@ -5,7 +5,7 @@ import { PiArrowLeft, PiMoon, PiSun } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { Logo, NetworkBadge } from "./Chrome";
+import { Logo, DemoBadge } from "./Chrome";
 import { Hash } from "./Icons";
 
 export type NavItem = { id: string; label: string; badge?: number };
@@ -38,7 +38,7 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
   const addr = user?.wallet?.address;
   const account = (
     <>
-      <NetworkBadge />
+      <DemoBadge />
       {addr && <span className="cap"><Hash value={addr} /></span>}
       <ThemeToggle />
       <button className="cap text-left hover:text-ink" onClick={async () => { await logout(); router.push("/"); }}>Sign out</button>
@@ -60,7 +60,7 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
       <aside className="flex flex-col gap-6 border-b border-line p-5 md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r">
         <div className="flex items-center justify-between">
           <Link href="/app" aria-label="Fala home"><Logo /></Link>
-          <span className="md:hidden"><NetworkBadge /></span>
+          <span className="md:hidden"><DemoBadge /></span>
         </div>
         {back && <Link href="/app" className="flex w-fit items-center gap-1.5 text-[14px] text-mute transition hover:text-ink"><PiArrowLeft size={16} aria-hidden />Vaults</Link>}
         {title && <div className="truncate text-[20px] tracking-tightest">{title}</div>}

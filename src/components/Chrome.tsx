@@ -1,6 +1,6 @@
 "use client";
 
-import { ACTIVE, DEMO, NETWORK } from "../config/chain";
+import { ACTIVE, DEMO } from "../config/chain";
 import { useTx } from "../hooks/useTx";
 
 export const Logo = ({ light }: { light?: boolean }) => (
@@ -14,10 +14,10 @@ export const Logo = ({ light }: { light?: boolean }) => (
 );
 
 
-export function NetworkBadge() {
-  const tone =
-    NETWORK === "mainnet" ? "bg-bad text-white" : NETWORK === "testnet" ? "bg-card text-mute" : "bg-ink text-canvas";
-  return <span className={`tag rounded-full px-3 py-1 uppercase ${tone}`}>{DEMO ? "demo" : NETWORK}</span>;
+/** Marks sample data, shown only when no vault is configured. The chain is not worth a badge. */
+export function DemoBadge() {
+  if (!DEMO) return null;
+  return <span className="tag rounded-full bg-ink px-3 py-1 uppercase text-canvas">demo</span>;
 }
 
 export function Toasts() {
