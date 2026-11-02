@@ -19,7 +19,13 @@ export const env = {
   rpc: opt("RPC_URL", "https://rpc.testnet.arc.io"),
   port: Number(opt("PORT", "8787")),
   publicUrl: opt("PUBLIC_URL", "http://localhost:8787"),
-  webOrigin: opt("WEB_ORIGIN", "http://localhost:5173"),
+  /**
+   * Every origin allowed to call this API, as a comma-separated list. WEB_ORIGINS wins over
+   * WEB_ORIGIN so the deployed origin can be set in fly.toml without touching the secret store.
+   * The first entry is the one emails link to.
+   */
+  origins: () => (opt("WEB_ORIGINS") || opt("WEB_ORIGIN") || "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean),
+  get webOrigin() { return this.origins()[0]; },
   agentGas: opt("AGENT_GAS_USDC", "0.3"),
   groqKey: () => opt("GROQ_API_KEY"),
   model: () => opt("MODEL", "openai/gpt-oss-120b"),

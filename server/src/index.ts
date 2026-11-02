@@ -9,7 +9,7 @@ import { relayEnabled, relayPass, startRelay } from "./relay.js";
 
 await migrate();
 const app = new Hono();
-app.use("*", cors({ origin: env.webOrigin, allowHeaders: ["authorization", "content-type", "mcp-session-id", "mcp-protocol-version"], allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] }));
+app.use("*", cors({ origin: env.origins(), allowHeaders: ["authorization", "content-type", "mcp-session-id", "mcp-protocol-version"], allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] }));
 app.get("/health", (c) => c.json({ ok: true, network: env.network }));
 // Without this, a request that fails in the browser leaves no trace at all on the server.
 app.use("*", async (c, next) => {
