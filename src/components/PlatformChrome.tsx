@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -73,7 +74,10 @@ export function PlatformFooter() {
     <footer className="bg-black pb-12 pt-20 text-white">
       <div className="wrap flex flex-wrap items-center justify-between gap-6">
         <Logo light />
-        <div className="text-[13px] text-white/50">Unaudited. Built on Arc.</div>
+        <div className="flex items-center gap-2 text-[13px] text-white/50">
+          <Image src="/media/fala/brand/arc-mark.png" alt="" width={20} height={20} className="rounded-[5px]" />
+          Built on Arc
+        </div>
       </div>
     </footer>
   );
