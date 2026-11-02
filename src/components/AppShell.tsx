@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { IconType } from "react-icons";
 import { PiArrowLeft, PiMoon, PiSun } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -8,7 +9,7 @@ import { useAuth } from "../hooks/useAuth";
 import { Logo, DemoBadge } from "./Chrome";
 import { Hash } from "./Icons";
 
-export type NavItem = { id: string; label: string; badge?: number };
+export type NavItem = { id: string; label: string; badge?: number; icon?: IconType };
 
 function ThemeToggle() {
   const [light, setLight] = useState(false);
@@ -68,7 +69,11 @@ export function AppShell({ title, back, items, active, onSelect, children }: { t
           <nav className="-mx-1 flex gap-1 overflow-x-auto md:flex-col">
             {items.map((t) => (
               <button key={t.id} onClick={() => onSelect?.(t.id)} className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] transition ${active === t.id ? "bg-card text-ink" : "text-mute hover:text-ink"}`}>
-                {t.label}
+                <span className="flex items-center gap-2.5">
+                  {/* The icon follows the label's colour, so the active row reads as one piece. */}
+                  {t.icon && <t.icon size={17} aria-hidden />}
+                  {t.label}
+                </span>
                 {!!t.badge && <span className="tag rounded-full bg-warn/15 px-2 text-warn">{t.badge}</span>}
               </button>
             ))}

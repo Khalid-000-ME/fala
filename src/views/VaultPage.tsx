@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { isAddress, parseUnits, type Address } from "viem";
+import { PiClockCounterClockwise, PiEnvelopeSimple, PiRobot, PiSlidersHorizontal, PiSquaresFour, PiUsersThree } from "react-icons/pi";
 import { useApi, type AgentDto, type VaultDto } from "../lib/api";
 import { useOwnerWallet } from "../lib/owner";
 import { useWalletBalance } from "../hooks/useWalletBalance";
@@ -19,12 +20,12 @@ import { parseUsdc } from "../lib/format";
 const KIND_LABEL = { managed: "Fala agent", connected: "Connected", byo: "Own agent" } as const;
 
 const TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "agents", label: "Agents" },
-  { id: "requests", label: "Requests" },
-  { id: "payees", label: "Payees" },
-  { id: "activity", label: "Activity" },
-  { id: "settings", label: "Settings" },
+  { id: "overview", label: "Overview", icon: PiSquaresFour },
+  { id: "agents", label: "Agents", icon: PiRobot },
+  { id: "requests", label: "Requests", icon: PiEnvelopeSimple },
+  { id: "payees", label: "Payees", icon: PiUsersThree },
+  { id: "activity", label: "Activity", icon: PiClockCounterClockwise },
+  { id: "settings", label: "Settings", icon: PiSlidersHorizontal },
 ];
 
 export default function VaultPage({ id }: { id: string }) {
