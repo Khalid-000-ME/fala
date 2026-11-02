@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import GradientASCII from "../components/reactbits/GradientASCII";
-import { Logo } from "../components/Chrome";
+import { LogoMark } from "../components/Chrome";
 import { GoogleIcon } from "../components/Icons";
 import { LandingStory } from "../components/LandingStory";
 import { useAuth } from "../hooks/useAuth";
@@ -75,8 +75,8 @@ export default function Landing() {
             className="absolute inset-x-0 top-[8vh] z-20 flex flex-col items-center px-5 text-center"
             style={{ transform: `translateY(${-p * 120}px)`, opacity: intro, pointerEvents: intro < 0.1 ? "none" : "auto" }}
           >
-            <Logo light />
-            <div className="cap mt-6 !text-white/60">Email approvals for AI agents</div>
+            <LogoMark size={96} />
+            <div className="cap mt-7 !text-white/60">Email approvals for AI agents</div>
             <h1 className="mt-4 max-w-5xl font-normal leading-[1.04] tracking-tightest text-white" style={{ fontSize: "min(6.4vw, 8vh)" }}>Approve your agent's payments from Gmail.</h1>
             <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-white/70">No wallet app. No dashboard. Your agent emails you, you reply, and it's paid.</p>
             <button className="btn mt-6 !bg-white !text-[#030712]" disabled={!ready} onClick={() => login()}>{signIn}</button>

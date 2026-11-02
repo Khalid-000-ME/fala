@@ -3,13 +3,29 @@
 import { ACTIVE, DEMO } from "../config/chain";
 import { useTx } from "../hooks/useTx";
 
+const DOTS = (
+  <>
+    <circle cx="3" cy="4" r="1.6" /><circle cx="10" cy="4" r="1.6" /><circle cx="17" cy="4" r="1.6" />
+    <circle cx="6.5" cy="10" r="1.6" /><circle cx="13.5" cy="10" r="1.6" /><circle cx="10" cy="16" r="1.6" />
+  </>
+);
+
+/** The mark on its own: black dots on a white rounded tile, for where the brand needs no word. */
+export const LogoMark = ({ size = 72 }: { size?: number }) => (
+  <span
+    className="inline-flex shrink-0 items-center justify-center bg-white"
+    style={{ width: size, height: size, borderRadius: Math.round(size * 0.26) }}
+    aria-label="Fala"
+    role="img"
+  >
+    <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 20 20" fill="#030712" aria-hidden>{DOTS}</svg>
+  </span>
+);
+
 export const Logo = ({ light }: { light?: boolean }) => (
-  <span className={`inline-flex items-center gap-2 text-[19px] font-medium tracking-tight ${light ? "text-white" : "text-ink"}`}>
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-      <circle cx="3" cy="4" r="1.6" /><circle cx="10" cy="4" r="1.6" /><circle cx="17" cy="4" r="1.6" />
-      <circle cx="6.5" cy="10" r="1.6" /><circle cx="13.5" cy="10" r="1.6" /><circle cx="10" cy="16" r="1.6" />
-    </svg>
-    FALA
+  <span className={`inline-flex items-center gap-2 font-brand text-[19px] font-semibold uppercase tracking-tight ${light ? "text-white" : "text-ink"}`}>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden>{DOTS}</svg>
+    Fala
   </span>
 );
 
