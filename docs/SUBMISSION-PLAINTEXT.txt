@@ -16,6 +16,8 @@ No wallet app. No seed phrase. No dashboard for the human. If you can reply to a
 A prompt-injected agent can write any email it wants. It cannot make Google sign one from you.
 
 Live on Arc mainnet: 0xE20D31af287e546A35897FD65a822f3dEF7FA008
+https://explorer.arc.io/address/0xE20D31af287e546A35897FD65a822f3dEF7FA008
+
 App: https://fala-approve.vercel.app
 Code: https://github.com/Khalid-000-ME/fala
 
